@@ -1,0 +1,14 @@
+flask
+flask-sqlalchemy
+pyodbc
+flask-wtf
+flask-login
+flask-bcrypt
+Flask-Mail
+pandas
+sqlalchemy
+Jinja2
+flask-cors
+flask-restful
+python-dotenv
+requests

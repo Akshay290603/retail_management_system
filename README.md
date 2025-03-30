@@ -36,4 +36,5 @@
       {if possible make login methods (means customer can access only e-commerce webite and retailer can access only retailer dashboard no cross connections 🫡🙈)}
     </li>
   </ui>
-<div class="tenor-gif-embed" data-postid="26177508" data-share-method="host" data-aspect-ratio="1.12281" data-width="100%"><a href="https://tenor.com/view/tired-cat-gif-26177508">Tired Cat GIF</a>from <a href="https://tenor.com/search/tired+cat-gifs">Tired Cat GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+![tired-cat](https://github.com/user-attachments/assets/4e71a686-55ec-44be-bab0-70e11f316bf2)
+

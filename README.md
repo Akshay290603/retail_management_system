@@ -36,6 +36,5 @@
       {if possible make login methods (means customer can access only e-commerce webite and retailer can access only retailer dashboard no cross connections 🫡🙈)}
     </li>
   </ui>
-  <img src="https://github.com/Akshay290603/retail_management_system/blob/master/tired-cat.gif">
-![](https://github.com/Akshay290603/retail_management_system/blob/master/tired-cat.gif)
+
 

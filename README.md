@@ -36,5 +36,5 @@
       {if possible make login methods (means customer can access only e-commerce webite and retailer can access only retailer dashboard no cross connections 🫡🙈)}
     </li>
   </ui>
-![tired-cat](https://github.com/user-attachments/assets/4e71a686-55ec-44be-bab0-70e11f316bf2)
+![](https://github.com/Your_Repository_Name/Your_GIF_Name.gif)
 

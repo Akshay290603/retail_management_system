@@ -1,0 +1,134 @@
+
+{% extends "layout.html" %}
+
+{% block content %}
+
+<!-- SLIDE  -->
+
+<div id="carouselExampleIndicators" class="carousel slide">
+    <div class="carousel-indicators">
+      <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+      <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1" aria-label="Slide 2"></button>
+      <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2" aria-label="Slide 3"></button>
+    </div>
+    <div class="carousel-inner">
+      <div class="carousel-item active slider-img">
+        <img src="{{ url_for('static', filename='slider/slider-1.jpg') }}" class="d-block w-100" alt="...">
+      </div>
+      <div class="carousel-item slider-img">
+        <img src="{{url_for('static',filename='slider/slider-2.jpg')}}" class="d-block w-100" alt="...">
+      </div>
+      <div class="carousel-item slider-img">
+        <img src="{{url_for('static',filename='slider/slider-3.jpg')}}" class="d-block w-100" alt="...">
+      </div>
+    </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
+      <span class="carousel-control-prev-icon" ></span>
+      <span class="visually-hidden">Previous</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="next">
+      <span class="carousel-control-next-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Next</span>
+    </button>
+  </div>
+
+    <!-- CATEGORY CARFS -->
+
+    <div class="container mt-5">
+        <div class="row">
+            <!-- Electronics Category -->
+            <div class="col-md-4">
+                <div class="card">
+                    <h5 class="card-title text-center heading-text">Up to 35% off | A wide range of electronics</h5>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 d-flex flex-column align-items-center">
+                                <a href="customer/sucategory.html"><img src="{{ url_for('static', filename='assets/mobile.jpg') }}" class="img-fluid fixed-img" alt="Mobile Phones">
+                                </a>
+                                <p class="text-center">Mobiles</p>
+                            </div>
+                            <div class="col-6 d-flex flex-column align-items-center">
+                                <a href="customer\sucategory.html"><img src="{{ url_for('static', filename='assets/charger.jpg') }}" class="img-fluid fixed-img" alt="Charger"></a>
+                                <p class="text-center">Chargers</p>
+                            </div>
+                            <div class="col-6 d-flex flex-column align-items-center">
+                                <a href="customer\sucategory.html"><img src="{{ url_for('static', filename='assets/laptop.jpg') }}" class="img-fluid fixed-img" alt="Laptop"></a>
+                                <p class="text-center">Loptops</p>
+                            </div>
+                            <div class="col-6 d-flex flex-column align-items-center">
+                                <a href="customer\sucategory.html"><img src="{{ url_for('static', filename='assets/earphones.jpg') }}" class="img-fluid fixed-img" alt="Earphone"></a>
+                                <p class="text-center">Earphones</p>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-center">Explore Electronics Items</p>
+                            <a href="#">see more</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Food Category -->
+            <div class="col-md-4">
+                <div class="card">
+                    <h5 class="card-title text-center heading-text">Food</h5>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 d-flex flex-column align-items-center">
+                                <a href="customer/sucategory.html"><img src="{{ url_for('static', filename='assets/snacks.jpg') }}" class="img-fluid fixed-img" alt="Mobile Phones">
+                                </a>
+                                <p class="text-center">Snacks</p>
+                            </div>
+                            <div class="col-6 d-flex flex-column align-items-center">
+                                <a href="customer/sucategory.html"><img src="{{ url_for('static', filename='assets/groceries.jpg') }}" class="img-fluid fixed-img" alt="Mobile Phones">
+                                </a>
+                                <p class="text-center">Groceries</p>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-center">Explore Food Items</p>
+                            <a href="#">see more</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clothing Category -->
+            <div class="col-md-4">
+                <div class="card">
+                    <h2 class="card-title text-center heading-text">Customers Most-Loved Fashion for you | Upto 60 % OFF </h2>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 d-flex flex-column align-items-center">
+                                <a href="customer/sucategory.html"><img src="{{ url_for('static', filename='assets/shirt.jpg') }}" class="img-fluid fixed-img" alt="shirt">
+                                </a>
+                                <p class="text-center">Shirts</p>
+                            </div>
+                            <div class="col-6 d-flex flex-column align-items-center">
+                                <a href="customer/sucategory.html"><img src="{{ url_for('static', filename='assets/pants.jpeg') }}" class="img-fluid fixed-img" alt="Pants">
+                                </a>
+                                <p class="text-center">Pants</p>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-center">Explore Clothing Items</p>
+                            <a href="#">see more</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- <style>
+        .fixed-img {
+            width: 100px; 
+            height: 100px; 
+            object-fit: cover; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+    </style> -->
+{% endblock %}

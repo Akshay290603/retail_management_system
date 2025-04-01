@@ -13,7 +13,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-  <!-- Header -->
+
+  {% block navbar %}
   <header>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <div class="container-fluid">
@@ -22,9 +23,13 @@
           aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
+        <a class="navbar-brand " href="{{url_for('cart')}}">
+          <img src="{{ url_for('static',filename='navbar_icons/location.png') }}" alt="cart-logo" width="24" height="24" class="">
+          Current Address
+        </a>
         <div class="justify-content-center mx-auto navbar-collapse flex-grow-0">
           <form class="d-flex" role="search">
-              <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+              <input class="form-control me-2" style="width: 400px;" type="search" placeholder="Search for electronics, food, clothing" aria-label="Search">
               <button class="btn btn-outline-success" type="submit">Search</button>
           </form>
         </div>
@@ -43,10 +48,15 @@
               <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
             </li>
           </ul>
+          <a class="navbar-brand " href="{{url_for('cart')}}">
+            <img src="{{ url_for('static',filename='navbar_icons/shopping-cart.png') }}" alt="cart-logo" width="30" height="24">
+          </a>
         </div>
       </div>
     </nav>
   </header>
+  {% endblock navbar %}
+
 
   <!-- Main Content -->
   <main class="container mt-4">

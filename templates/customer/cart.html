@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block navbar %}
+
+{% endblock navbar %}
+
+
+{% block content %}
+<div class="container">
+    <h2>Your Cart</h2>
+    {% if cart_items %}
+    <ul class="list-group">
+        {% for item in cart_items %}
+        <li class="list-group-item">
+            {{ item.name }} - Quantity: {{ item.quantity }} - ${{ item.price * item.quantity }}
+            <form action="/remove_from_cart/{{ item.id }}" method="POST" class="d-inline">
+                <button type="submit" class="btn btn-danger">Remove</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    <p>Total: ${{ total }}</p>
+    <a href="/checkout" class="btn btn-primary">Proceed to Checkout</a>
+    {% else %}
+    <p>Your cart is empty.</p>
+    {% endif %}
+</div>
+{% endblock %}

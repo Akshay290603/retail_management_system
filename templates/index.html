@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% block title %}Home - Retail Management System{% endblock %}
+
+{% block content %}
+<div class="jumbotron text-center">
+  <h1 class="display-4">Welcome to the SaKsHaM Store</h1>
+  <p class="lead">Explore categories, shop for products, and manage your orders seamlessly.</p>
+  <hr class="my-4">
+  <a class="btn btn-primary btn-lg" href="{{ url_for('login') }}" role="button">Login</a>
+  <a class="btn btn-secondary btn-lg" href="{{ url_for('register') }}" role="button">Register</a>
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>{{ product.name }}</h2>
+    <p>{{ product.description }}</p>
+    <p>Price: ${{ product.price }}</p>
+    <form action="/add_to_cart/{{ product.id }}" method="POST">
+        <button type="submit" class="btn btn-success">Add to Cart</button>
+    </form>
+</div>
+{% endblock %}

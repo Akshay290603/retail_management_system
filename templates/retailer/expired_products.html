@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Expired or Soon-to-Expire Products</h2>
+    <table class="table table-warning">
+        <thead>
+            <tr>
+                <th>Product Name</th>
+                <th>Expiry Date</th>
+                <th>Status</th>
+                <th>Discount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in expired_products %}
+            <tr>
+                <td>{{ product.name }}</td>
+                <td>{{ product.expiry_date }}</td>
+                <td>{{ product.status }}</td>
+                <td>
+                    {% if product.status == 'Near Expiry' %}
+                    <form action="/apply_discount/{{ product.id }}" method="POST">
+                        <input type="number" name="discount" placeholder="Discount %" min="0" max="100">
+                        <button type="submit" class="btn btn-primary">Apply</button>
+                    </form>
+                    {% else %}
+                    N/A
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

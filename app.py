@@ -52,44 +52,73 @@ def index():
 def layout():
     return render_template('layout.html')
 
+# @app.route('/login', methods=['GET', 'POST'])
+# def login():
+#     if request.method == 'POST':
+#         password = request.form.get('password')
+#         username = request.form.get('username')
+#         user_type = request.form.get('user_type')
+
+#         conn = get_db_connection()
+#         cursor = conn.cursor()
+
+#         table = "Retailer" if user_type == "Retailer" else "Customer"
+#         query = f"SELECT * FROM [{table}] WHERE username in (?)"
+#         print(query)
+#         cursor.execute(query, (username,))
+#         user = cursor.fetchone()
+#         cursor.close()
+#         conn.close()
+
+#         if user:
+#             stored_password = user[4] 
+            
+#             if stored_password == password:  
+#                 session['user'] = user[1]
+#                 session['user_type'] = user_type
+
+#                 if user_type == "Retailer":
+#                     session['store_name'] = user[5]  
+#                     return redirect(url_for('current_orders'))  
+#                 else:
+#                     return redirect(url_for('category'))  
+#             else:
+#                 return "Invalid Credentials - Password does not match"
+#         else:
+#             return "Invalid Credentials - User not found"
+
+#     return render_template("login.html")
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        password = request.form.get('password')
         username = request.form.get('username')
-        user_type = request.form.get('user_type')
+        password = request.form.get('password')
+        user_type = request.form.get('user_type').lower()
 
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        table = "Retailer" if user_type == "Retailer" else "Customer"
-        query = f"SELECT * FROM [{table}] WHERE username in (?)"
+        table = "Retailer" if user_type == "retailer" else "Customer"
+        query = f"SELECT * FROM [{table}] WHERE username = ?"
         print(query)
         cursor.execute(query, (username,))
         user = cursor.fetchone()
         cursor.close()
         conn.close()
 
-        if user:
-            stored_password = user[4] 
-            
-            if stored_password == password:  
-                session['user'] = user[1]
-                session['user_type'] = user_type
-
-                if user_type == "Retailer":
-                    session['store_name'] = user[5]  
-                    return redirect(url_for('current_orders'))  
-                else:
-                    return redirect(url_for('category'))  
+        if user and user[4] == password:
+            session['user'] = user[1]
+            session['user_type'] = user_type
+            if user_type == "retailer":
+                session['store_name'] = user[5]
+                return redirect(url_for('current_orders'))
             else:
-                return "Invalid Credentials - Password does not match"
+                return redirect(url_for('category'))
         else:
-            return "Invalid Credentials - User not found"
-
+            return "Invalid Credentials"
     return render_template("login.html")
 
-    
+  
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -128,25 +157,71 @@ def register():
 
     return render_template("register.html")
 
-    
-
-@app.route('/logout')
+@app.route('/logout') 
 def logout():
     session.clear()
-    return render_template('login.html')
+    return redirect(url_for('login'))
 
 @app.route('/chome')
 @app.route('/customer/category')
 def category():
     return render_template('customer/category.html')
-
 @app.route('/customer/cart')
 def cart():
-    return render_template('customer/cart.html')
+    if 'user' not in session or session.get('user_type') != 'Customer':
+        print(session.get('user_type'))
+        return redirect(url_for('login'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = '''
+        SELECT p.product_name, c.quantity, p.unit_price, p.product_id 
+        FROM Cart as c
+        JOIN Products as p ON c.product_id = p.product_id
+        WHERE c.customer_id = (SELECT customer_id FROM Customer WHERE username = ?)
+    '''
+    cursor.execute(query, (session['user'],))
+    cart_items = [
+        {'name': row[0], 'quantity': row[1], 'price': row[2], 'id': row[3]}
+        for row in cursor.fetchall()
+    ]
+    total = sum(item['price'] * item['quantity'] for item in cart_items)
+    cursor.close()
+    conn.close()
+    return render_template('customer/cart.html', cart_items=cart_items, total=total)
 
 @app.route('/customer/home')
 def home():
-    return render_template('customer/home.html')
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Fetch cart items for the logged-in user
+    query = '''
+        SELECT p.product_name, c.quantity, p.unit_price, p.product_id 
+        FROM Cart as c
+        JOIN Products as p ON c.product_id = p.product_id
+        WHERE c.customer_id = (SELECT customer_id FROM Customer WHERE username = ?)
+    '''
+    cursor.execute(query, (session['user'],))
+
+    cart_items = [
+        {
+            'name': row[0],
+            'quantity': row[1],
+            'price': row[2],
+            'id': row[3]
+        }
+        for row in cursor.fetchall()
+    ]
+
+    # Calculate total price
+    total = sum(item['price'] * item['quantity'] for item in cart_items)
+
+    cursor.close()
+    conn.close()
+
+    return render_template('customer/cart.html', cart_items=cart_items, total=total)
+    
 
 @app.route('/customer/order_history')
 def order_history():

@@ -1,10 +1,12 @@
 ﻿# Retail Management System 
 
 ### _**30-03-2025**_
-
+\ \
 # Samhita 
 
 * login + registeration pages ✅ (connection is remaining)
+
+\ \
 
 # Akshay
 
@@ -12,7 +14,7 @@
 * (images insertion is pending ) + 
 * cart (yet to start)
 
-###_ **31-03-2025**_
+### _ **31-03-2025**_
 
 # Akshay 
      

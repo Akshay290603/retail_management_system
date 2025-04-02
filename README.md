@@ -31,10 +31,10 @@
 
 <br>
      
-* order details 
-* category page (completing image insertion )  
+* order details ✅
+* category page (completing image insertion )  ✅
 * cart (complete it any how ) ✅
-* study cardinality of tables in database and create representation of it for showing Ak-M
+* study cardinality of tables in database and create representation of it for showing Ak-M ✅
 * complete database connection if there is time 😶‍🌫️ ❌
 
 <br>
@@ -56,7 +56,7 @@
 
 <br>
 
-* customer management for retailers + All database connections ✅
+* customer management for retailers + All database connections + creation ✅
 
 <br>
 

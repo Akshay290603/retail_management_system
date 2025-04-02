@@ -1,4 +1,7 @@
-﻿# ** Retail Management System **
+﻿# **Retail Management System**
+
+<br>
+<br>
 
 ### _**30-03-2025**_
 
@@ -20,7 +23,7 @@
 
 <br>
 
-### _ **31-03-2025**_
+### _**31-03-2025**_
 
 <br>
 

@@ -1,6 +1,6 @@
 ﻿# Retail Management System 
 
-### 30-03-2025
+### _**30-03-2025**_
 
 # Samhita 
 
@@ -12,7 +12,7 @@
 * (images insertion is pending ) + 
 * cart (yet to start)
 
-### 31-03-2025
+###_ **31-03-2025**_
 
 # Akshay 
      
@@ -27,7 +27,7 @@
 * login + registeration pages (connection and testing {reflection insertion of customers in Customers Table and retailers in Retailers Table }) ✅
 * if possible make login methods (means customer can access only e-commerce webite and retailer can access only retailer dashboard no cross connections 🫡🙈)} ✅
 
-### 01-04-2025
+### _**01-04-2025**_
 
 # Akshay 
 
@@ -38,7 +38,7 @@
 * products page ✅
 * product page database connections (halfy done : database connection and dynamism with jinja template ) 
 
-### 02-04-2025
+### _**02-04-2025**_
 
 # AKshay
 

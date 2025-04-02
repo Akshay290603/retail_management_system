@@ -1,7 +1,7 @@
 ﻿# Retail Management System 
 
 ### _**30-03-2025**_
-\ \
+\ 
 # Samhita 
 
 * login + registeration pages ✅ (connection is remaining)

@@ -2,7 +2,7 @@ import pyodbc
 from flask import Flask, render_template, request, redirect, url_for, session
 from config import get_db_connection
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import LoginManager, UserMixin, current_user, login_required
+# from flask_login import LoginManager, UserMixin, current_user, login_required
 
 app = Flask(__name__)
 app.secret_key = "1234"
@@ -49,49 +49,91 @@ def index():
     return render_template('index.html')
 
 @app.route('/layout')
-# @login_required
 def layout():
     return render_template('layout.html')
 
-@app.route('/login')
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        user_type = request.form['user_type']
+        password = request.form.get('password')
+        username = request.form.get('username')
+        user_type = request.form.get('user_type')
 
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        table = "Retailers" if user_type == "retailer" else "Customers"
-        cursor.execute(f"SELECT * FROM {table} WHERE email = ?", (email,))
+        table = "Retailer" if user_type == "retailer" else "Customer"
+        query = f"SELECT * FROM [{table}] WHERE username in (?)"
+        cursor.execute(query, (username,))
         user = cursor.fetchone()
         cursor.close()
         conn.close()
 
-        if user and check_password_hash(user[3], password):
-            session['user'] = user[1]
-            session['user_type'] = user_type
+        if user:
+            stored_password = user[4] 
+            
+            if stored_password == password:  
+                session['user'] = user[1]
+                session['user_type'] = user_type
 
-            if user_type == "retailer":
-                session['store_name'] = user[4] 
-
-            return redirect(url_for('home'))
+                if user_type == "retailer":
+                    session['store_name'] = user[5]  
+                    return redirect(url_for('current_orders'))  
+                else:
+                    return redirect(url_for('category'))  
+            else:
+                return "Invalid Credentials - Password does not match"
         else:
-            return " Invalid Credentials"
+            return "Invalid Credentials - User not found"
 
     return render_template("login.html")
+
     
 
-@app.route('/register')
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    return render_template('register.html')
+    if request.method == 'POST':
+        name = request.form.get('full_name')
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        address = request.form.get('address')
+        mobile =request.form.get('mobile_number')
+        user_type = request.form.get('user_type')
+        store_name = request.form.get('store_name') if user_type == "retailer" else None
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        if user_type == "retailer":
+            query1 = '''
+                INSERT INTO Retailer (full_name, username, email, password, address, store_name) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            '''
+            cursor.execute(query1, (name, username, email, password, address, store_name))
+
+        else:
+            query2 = '''
+                INSERT INTO Customer (full_name, username, email, password, address) 
+                VALUES (?, ?, ?, ?, ?)
+            '''
+            cursor.execute(query2, (name, username, email, password, address))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return redirect(url_for('login'))
+
+    return render_template("register.html")
+
+    
 
 @app.route('/logout')
 def logout():
     return render_template('index.html')
 
-@app.route('/customer/home')
+@app.route('/chome')
 @app.route('/customer/category')
 def category():
     return render_template('customer/category.html')
@@ -116,7 +158,7 @@ def subcategory():
 def product():
     return render_template('customer/product.html')
 
-@app.route('/retailer/home')
+@app.route('/rhome')
 @app.route('/retailer/current_orders')
 def current_orders():
     conn = get_db_connection()

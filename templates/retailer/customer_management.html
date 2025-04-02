@@ -16,10 +16,10 @@
         <tbody>
             {% for customer in customers %}
             <tr>
-                <td>{{ customer.id }}</td>
-                <td>{{ customer.name }}</td>
+                <td>{{ customer.customer_id }}</td>
+                <td>{{ customer.full_name }}</td>
                 <td>{{ customer.email }}</td>
-                <td>{{ customer.phone }}</td>
+                <td>{{ customer.mobile_number }}</td>
                 <td>
                     <button class="btn btn-info">View</button>
                     <button class="btn btn-danger">Delete</button>

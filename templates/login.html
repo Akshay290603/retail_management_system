@@ -11,6 +11,13 @@
     <h2 class="mb-4">Login</h2>
     <form method="POST" action="{{ url_for('login') }}">
       <div class="mb-3">
+        <label for="user_type">Register as:</label>
+        <select name="user_type" id="user_type" onchange="toggleStoreName()" required>
+          <option value="customer">Customer</option>
+          <option value="retailer">Retailer</option>
+        </select>
+      </div>
+      <div class="mb-3">
         <label for="username" class="form-label">Username</label>
         <input type="text" class="form-control" name="username" id="username" placeholder="Enter your username" required>
       </div>
@@ -22,4 +29,16 @@
     </form>
   </div>
 </div>
+<script>
+  function toggleStoreName() {
+      var userType = document.getElementById("user_type").value;
+      var storeNameField = document.getElementById("store_name_field");
+
+      if (userType === "retailer") {
+          storeNameField.style.display = "block";
+      } else {
+          storeNameField.style.display = "none";
+      }
+  }
+</script>
 {% endblock %}

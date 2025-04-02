@@ -15,8 +15,8 @@
         <tbody>
             {% for product in low_stock_products %}
             <tr>
-                <td>{{ product.name }}</td>
-                <td>{{ product.stock }}</td>
+                <td>{{ product.product_name}}</td>
+                <td>{{ product.stock_qty}}</td>
                 <td>
                     <input type="number" name="add_stock" min="1" placeholder="Quantity">
                 </td>

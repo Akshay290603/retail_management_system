@@ -62,8 +62,9 @@ def login():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        table = "Retailer" if user_type == "retailer" else "Customer"
+        table = "Retailer" if user_type == "Retailer" else "Customer"
         query = f"SELECT * FROM [{table}] WHERE username in (?)"
+        print(query)
         cursor.execute(query, (username,))
         user = cursor.fetchone()
         cursor.close()
@@ -76,7 +77,7 @@ def login():
                 session['user'] = user[1]
                 session['user_type'] = user_type
 
-                if user_type == "retailer":
+                if user_type == "Retailer":
                     session['store_name'] = user[5]  
                     return redirect(url_for('current_orders'))  
                 else:
@@ -131,7 +132,8 @@ def register():
 
 @app.route('/logout')
 def logout():
-    return render_template('index.html')
+    session.clear()
+    return render_template('login.html')
 
 @app.route('/chome')
 @app.route('/customer/category')
@@ -148,6 +150,29 @@ def home():
 
 @app.route('/customer/order_history')
 def order_history():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    query = '''
+        SELECT order_id, order_date, status, SUM(quantity * unit_price) AS total
+        FROM OrderDetails
+        GROUP BY order_id, order_date, status
+        ORDER BY order_date DESC;
+    '''
+    
+    cursor.execute(query)
+    orders = [
+        {
+            'id': row[0],
+            'date': row[1],
+            'status': row[2],
+            'total': row[3]
+        }
+        for row in cursor.fetchall()
+    ]
+    
+    cursor.close()
+    conn.close()
     return render_template('customer/order_history.html')
 
 @app.route('/customer/subcategory')
@@ -229,7 +254,31 @@ def product_analysis():
 
 @app.route('/retailer/restock')
 def restock():
-    return render_template('retailer/restock.html')
+    conn=get_db_connection()
+    cursor=conn.cursor()
+    query='''
+        select p.product_name,i.stock_qty
+        from inventory as i
+        join 
+        products as p
+        on i.product_id=p.product_id
+        where stock_qty < 1;
+    '''
+
+    cursor.execute(query)
+
+    low_stock_products=[
+        {
+            'product_name':row[0],
+            'stock_qty':row[1]
+        }
+        for row in cursor.fetchall()
+    ]
+
+    cursor.close()
+    conn.close()
+
+    return render_template('retailer/restock.html',low_stock_products=low_stock_products)
 
 if __name__ == "__main__":
     app.run(debug=True)

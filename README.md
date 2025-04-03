@@ -88,6 +88,31 @@
 <br>
 
 * products page {dyanamic access through database directly using jinja template} ✅
-* restock + database 
+* restock + database  ✅
+
+<br>
+
+### _**03-04-2025**_
+
+<br>
+
+## Akshay 
+
+<br>
+
+* search bar handling
+* order History  ✅
+* cart 
+* credential handling
+
+<br>
+
+## Samhita 
+
+<br>
+
+* DashBoard
+* products updation
+* customized navbar (diffenrent for customer and retailer)
 
 <br>

@@ -1,4 +1,5 @@
 import pyodbc
+from flask import Flask, render_template, request, redirect, url_for, session
 
 # SQL Server connection
 def get_db_connection():
@@ -40,3 +41,4 @@ def get_products(search_query):
     cursor.close()
     conn.close()
     return products
+

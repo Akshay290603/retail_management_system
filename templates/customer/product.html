@@ -20,7 +20,9 @@
                         <h5 class="card-title">{{ product.product_name }}</h5>
                         <p>Price: ${{ product.unit_price }}</p>
                         <p class="card-text">{{ product.description }}</p>
-                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                        <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
+                          <button type="submit" class="btn btn-success">Add to Cart</button>
+                      </form>
                     </div>
                 </div>
             {% endif %}
@@ -39,7 +41,9 @@
                         <h5 class="card-title">{{ product.product_name }}</h5>
                         <p>Price: ${{ product.unit_price }}</p>
                         <p class="card-text">{{ product.description }}</p>
-                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                        <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
+                          <button type="submit" class="btn btn-success">Add to Cart</button>
+                      </form>
                     </div>
                 </div>
             {% endif %}
@@ -55,7 +59,9 @@
                         <h5 class="card-title">{{ product.product_name }}</h5>
                         <p>Price: ${{ product.unit_price }}</p>
                         <p class="card-text">{{ product.description }}</p>
-                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                        <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
+                          <button type="submit" class="btn btn-success">Add to Cart</button>
+                      </form>
                     </div>
                 </div>
             {% endif %}
@@ -71,7 +77,9 @@
                         <h5 class="card-title">{{ product.product_name }}</h5>
                         <p>Price: ${{ product.unit_price }}</p>
                         <p class="card-text">{{ product.description }}</p>
-                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                        <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
+                          <button type="submit" class="btn btn-success">Add to Cart</button>
+                      </form>
                     </div>
                 </div>
             {% endif %}
@@ -87,7 +95,9 @@
                         <h5 class="card-title">{{ product.product_name }}</h5>
                         <p>Price: ${{ product.unit_price }}</p>
                         <p class="card-text">{{ product.description }}</p>
-                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                        <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
+                          <button type="submit" class="btn btn-success">Add to Cart</button>
+                      </form>
                     </div>
                 </div>
             {% endif %}
@@ -103,7 +113,9 @@
                         <h5 class="card-title">{{ product.product_name }}</h5>
                         <p>Price: ${{ product.unit_price }}</p>
                         <p class="card-text">{{ product.description }}</p>
-                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                        <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
+                          <button type="submit" class="btn btn-success">Add to Cart</button>
+                      </form>
                     </div>
                 </div>
             {% endif %}
@@ -119,7 +131,9 @@
                         <h5 class="card-title">{{ product.product_name }}</h5>
                         <p>Price: ${{ product.unit_price }}</p>
                         <p class="card-text">{{ product.description }}</p>
-                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                        <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
+                          <button type="submit" class="btn btn-success">Add to Cart</button>
+                      </form>
                     </div>
                 </div>
             {% endif %}
@@ -135,13 +149,13 @@
                         <h5 class="card-title">{{ product.product_name }}</h5>
                         <p>Price: ${{ product.unit_price }}</p>
                         <p class="card-text">{{ product.description }}</p>
-                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                        <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
+                          <button type="submit" class="btn btn-success">Add to Cart</button>
+                      </form>
                     </div>
                 </div>
             {% endif %}
         {% endfor %}
  
-       
-       
 {% endblock %}
  

@@ -15,15 +15,17 @@
         <tbody>
             {% for product in low_stock_products %}
             <tr>
-                <td>{{ product.product_name}}</td>
-                <td>{{ product.stock_qty}}</td>
-                <td>
-                    <input type="hidden" name="product_id" value="{{ product.product_id }}">
-                    <input type="number" name="add_stock" min="1" placeholder="Quantity">
-                </td>
-                <td>
-                    <button class="btn btn-success">Update</button>
-                </td>
+                <td>{{ product.product_name }}</td>
+                <td>{{ product.stock_qty }}</td>
+                <form method="POST" action="/retailer/restock">
+                    <td>
+                        <input type="hidden" name="product_id" value="{{ product.product_id }}">
+                        <input type="number" name="add_stock" min="1" placeholder="Quantity">
+                    </td>
+                    <td>
+                        <button class="btn btn-success" type="submit">Update</button>
+                    </td>
+                </form>
             </tr>
             {% endfor %}
         </tbody>

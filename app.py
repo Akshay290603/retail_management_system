@@ -33,7 +33,7 @@ def login():
         conn.close()
 
         if user and user[4] == password:
-            session['user'] = user[1]
+            session['user'] = user[2]
             session['user_type'] = user_type
             if user_type == "retailer":
                 session['store_name'] = user[5]
@@ -87,7 +87,6 @@ def logout():
     se=session.get('user_type').lower()
     session.pop(se,None) 
     print(se)
-    return 'session end Please login ' 
     return redirect(url_for('login'))
 
 @app.route('/chome')
@@ -129,35 +128,68 @@ def cart():
     cursor = conn.cursor()
     query = '''
         SELECT p.product_name, c.quantity, p.unit_price, p.product_id 
-        FROM Cart as c
+        FROM cart as c
         JOIN Products as p ON c.product_id = p.product_id
         WHERE c.customer_id = (SELECT customer_id FROM Customer WHERE username = ?)
     '''
     cursor.execute(query, (session['user'],))
+    print(session['user'])
+    print(query)
     cart_items = [
-        {'name': row[0], 'quantity': row[1], 'price': row[2], 'id': row[3]}
+        {'product_name': row[0], 'quantity': row[1], 'unit_price': row[2], 'product_id': row[3]}
         for row in cursor.fetchall()
     ]
-    total = sum(item['price'] * item['quantity'] for item in cart_items)
+    total = sum(item['unit_price'] * item['quantity'] for item in cart_items)
     cursor.close()
     conn.close()
     return render_template('customer/cart.html', cart_items=cart_items, total=total)
 
-@app.route('/remove_from_cart/<int:product_id>', methods=['POST'])
-
-
-def remove_from_cart(product_id):
+@app.route('/add_to_cart/<int:product_id>', methods=['POST'])
+def add_to_cart(product_id):
     if 'user' not in session or session.get('user_type').lower() != 'customer':
         return redirect(url_for('login'))
     
     conn = get_db_connection()
     cursor = conn.cursor()
-    query = '''
-        DELETE FROM Cart
-        WHERE customer_id = (SELECT customer_id FROM Customer WHERE username = ?)
-        AND product_id = ?
-    '''
-    cursor.execute(query, (session['user'], product_id))
+    
+    # Check if product already in cart
+    cursor.execute('''
+        SELECT quantity FROM Cart 
+        WHERE product_id = ? AND customer_id = (SELECT customer_id FROM Customer WHERE username = ?)
+    ''', (product_id, session['user']))
+    result = cursor.fetchone()
+    
+    if result:
+        # Update quantity
+        cursor.execute('''
+            UPDATE Cart 
+            SET quantity = quantity + 1 
+            WHERE product_id = ? AND customer_id = (SELECT customer_id FROM Customer WHERE username = ?)
+        ''', (product_id, session['user']))
+    else:
+        # Add new product to cart
+        cursor.execute('''
+            INSERT INTO Cart (customer_id, product_id, quantity) 
+            VALUES ((SELECT customer_id FROM Customer WHERE username = ?), ?, 1)
+        ''', (session['user'], product_id))
+    
+    
+
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return redirect(url_for('cart'))
+
+@app.route('/remove_from_cart/<int:product_id>', methods=['POST'])
+def remove_from_cart(product_id):
+    if 'user' not in session or session.get('user_type').lower() != 'customer':
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # Remove product from cart
+    cursor.execute('''DELETE FROM Cart WHERE product_id = ? AND customer_id = (SELECT customer_id FROM Customer WHERE username = ?)''', (product_id, session['user']))
     conn.commit()
     cursor.close()
     conn.close()
@@ -167,7 +199,6 @@ def remove_from_cart(product_id):
 def home():
     return render_template('customer/home.html')
     
-
 @app.route('/customer/order_history')
 def order_history():
     conn = get_db_connection()
@@ -205,19 +236,20 @@ def products_show():
     cursor = conn.cursor()
  
     query = """
-        select product_name, description, unit_price, subcategory_id, image_name
+        select product_name, description, unit_price, subcategory_id, image_name, product_id
         from Products
         where product_name like ? ;
     """
     search_query = request.args.get('query', '')
     cursor.execute(query, ('%' + search_query + '%',))
     products = [
-        {
+        {   
             'product_name': row[0],
             'description': row[1],
             'unit_price': row[2],
             'subcategory_id': row[3],
-            'image_name': row[4]
+            'image_name': row[4],
+            'product_id': row[5]
         }
         for row in cursor.fetchall()
     ]
@@ -230,6 +262,7 @@ def products_show():
 # def product():
 #     search_query = request.args.get('query', '')  
 #     products = get_products(search_query)
+
 #     return render_template('product.html', products=products, search_query=search_query)
 
 @app.route('/rhome')
@@ -317,11 +350,12 @@ def restock():
         return redirect(url_for('login'))
     conn = get_db_connection()
     cursor = conn.cursor()
- 
+
     if request.method == 'POST':  # Handling form submission
         product_id = request.form['product_id']  # Get product_id from hidden input
         add_stock = int(request.form['add_stock'])  # Get entered quantity
- 
+        print(f"Product ID: {product_id}, Add Stock: {add_stock}")
+
         # Update inventory with the new stock
         update_query = '''
             UPDATE Inventory
@@ -330,7 +364,7 @@ def restock():
         '''
         cursor.execute(update_query, (add_stock, product_id))
         conn.commit()
- 
+
     # Fetch products that need restocking
     fetch_query = '''
         SELECT p.product_id, p.product_name, i.stock_qty
@@ -339,7 +373,7 @@ def restock():
         WHERE stock_qty < 110;
     '''
     cursor.execute(fetch_query)
- 
+
     low_stock_products = [
         {
             'product_id': row[0],  
@@ -348,10 +382,10 @@ def restock():
         }
         for row in cursor.fetchall()
     ]
- 
+
     cursor.close()
     conn.close()
- 
+
     return render_template('retailer/restock.html', low_stock_products=low_stock_products)
 
 if __name__ == "__main__":

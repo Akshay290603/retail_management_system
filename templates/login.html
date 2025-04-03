@@ -1,3 +1,5 @@
+{#
+
 {% extends "layout.html" %}
 {% block title %}Login - Retail Management System{% endblock %}
 
@@ -27,6 +29,53 @@
       </div>
       <button type="submit" class="btn btn-primary">Login</button>
     </form>
+  </div>
+</div>
+<script>
+  function toggleStoreName() {
+      var userType = document.getElementById("user_type").value;
+      var storeNameField = document.getElementById("store_name_field");
+
+      if (userType === "retailer") {
+          storeNameField.style.display = "block";
+      } else {
+          storeNameField.style.display = "none";
+      }
+  }
+</script>
+{% endblock %}
+
+#}
+{% extends "layout.html" %}
+{% block title %}Login - Retail Management System{% endblock %}
+
+{% block navbar %}
+{% endblock navbar%}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow-sm p-4">
+      <h2 class="mb-4 text-center">Login</h2>
+      <form method="POST" action="{{ url_for('login') }}">
+        <div class="mb-3">
+          <label for="user_type" class="form-label">Login as:</label>
+          <select name="user_type" id="user_type" class="form-select" onchange="toggleStoreName()" required>
+            <option value="customer">Customer</option>
+            <option value="retailer">Retailer</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="username" class="form-label">Username</label>
+          <input type="text" class="form-control" name="username" id="username" placeholder="Enter your username" required>
+        </div>
+        <div class="mb-3">
+          <label for="password" class="form-label">Password</label>
+          <input type="password" class="form-control" name="password" id="password" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Login</button>
+      </form>
+    </div>
   </div>
 </div>
 <script>

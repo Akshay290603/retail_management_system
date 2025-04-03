@@ -1,6 +1,6 @@
 import pyodbc
 from flask import Flask, render_template, request, redirect, url_for, session
-from config import get_db_connection
+from config import get_db_connection, get_products
 from werkzeug.security import generate_password_hash, check_password_hash
 # from flask_login import LoginManager, UserMixin, current_user, login_required
 
@@ -9,40 +9,23 @@ app.secret_key = "1234"
 
 
 # SQL Server connection
-def get_db_connection():
-    # Replace with your actual details
-    server = 'NICESS-LP264'  # Your SQL Server name or IP address
-    database = 'retail management DB'  # Your database name
-    username = 'sa'  # Your SQL Server username
-    password = 'training@123'  # Your SQL Server password
 
+# def get_db_connection():
+    
+#     server = 'NICESS-LP264'  
+#     database = 'retail management DB' 
+#     username = 'sa' 
+#     password = 'training@123'  
 
-    # Establish connection using ODBC Driver 13 for SQL Server
-    conn = pyodbc.connect(
-        'DRIVER={ODBC Driver 13 for SQL Server};'
-        f'SERVER={server};'
-        f'DATABASE={database};'
-        f'UID={username};'
-        f'PWD={password};'
-    )
+#     conn = pyodbc.connect(
+#         'DRIVER={ODBC Driver 13 for SQL Server};'
+#         f'SERVER={server};'
+#         f'DATABASE={database};'
+#         f'UID={username};'
+#         f'PWD={password};'
+#     )
 
-    return conn
-
-
-
-# # Initialize Flask-Login
-# login_manager = LoginManager()
-# login_manager.init_app(app)
-
-# # Dummy user class for demonstration
-# class User(UserMixin):
-#     def __init__(self, id):
-#         self.id = id
-
-# # Load user function
-# @login_manager.user_loader
-# def load_user(user_id):
-#     return User(user_id)
+#     return conn
 
 @app.route('/')
 def index():
@@ -51,43 +34,6 @@ def index():
 @app.route('/layout')
 def layout():
     return render_template('layout.html')
-
-# @app.route('/login', methods=['GET', 'POST'])
-# def login():
-#     if request.method == 'POST':
-#         password = request.form.get('password')
-#         username = request.form.get('username')
-#         user_type = request.form.get('user_type')
-
-#         conn = get_db_connection()
-#         cursor = conn.cursor()
-
-#         table = "Retailer" if user_type == "Retailer" else "Customer"
-#         query = f"SELECT * FROM [{table}] WHERE username in (?)"
-#         print(query)
-#         cursor.execute(query, (username,))
-#         user = cursor.fetchone()
-#         cursor.close()
-#         conn.close()
-
-#         if user:
-#             stored_password = user[4] 
-            
-#             if stored_password == password:  
-#                 session['user'] = user[1]
-#                 session['user_type'] = user_type
-
-#                 if user_type == "Retailer":
-#                     session['store_name'] = user[5]  
-#                     return redirect(url_for('current_orders'))  
-#                 else:
-#                     return redirect(url_for('category'))  
-#             else:
-#                 return "Invalid Credentials - Password does not match"
-#         else:
-#             return "Invalid Credentials - User not found"
-
-#     return render_template("login.html")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -119,7 +65,6 @@ def login():
     return render_template("login.html")
 
   
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -166,11 +111,35 @@ def logout():
 @app.route('/customer/category')
 def category():
     return render_template('customer/category.html')
+
+# @app.route('/customer/cart')
+# def cart():
+#     # if 'user' not in session or session.get('user_type') != 'Customer':
+#     #     print(session.get('user_type'))
+#     #     return redirect(url_for('login'))
+    
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
+#     query = '''
+#         SELECT p.product_name, c.quantity, p.unit_price, p.product_id 
+#         FROM Cart as c
+#         JOIN Products as p ON c.product_id = p.product_id
+#         WHERE c.customer_id = (SELECT customer_id FROM Customer WHERE username = ?)
+#     '''
+#     cursor.execute(query, (session['user'],))
+#     cart_items = [
+#         {'product_name': row[0], 'quantity': row[1], 'unit_price': row[2], 'product_id': row[3]}
+#         for row in cursor.fetchall()
+#     ]
+#     total = sum(item['price'] * item['quantity'] for item in cart_items)
+#     cursor.close()
+#     conn.close()
+#     return render_template('customer/cart.html', cart_items=cart_items, total=total)
+
 @app.route('/customer/cart')
 def cart():
-    if 'user' not in session or session.get('user_type') != 'Customer':
-        print(session.get('user_type'))
-        return redirect(url_for('login'))
+    # if 'user' not in session or session.get('user_type') != 'Customer':
+    #     return redirect(url_for('login'))
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -190,37 +159,27 @@ def cart():
     conn.close()
     return render_template('customer/cart.html', cart_items=cart_items, total=total)
 
-@app.route('/customer/home')
-def home():
+@app.route('/remove_from_cart/<int:product_id>', methods=['POST'])
+def remove_from_cart(product_id):
+    if 'user' not in session or session.get('user_type') != 'Customer':
+        return redirect(url_for('login'))
+    
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    # Fetch cart items for the logged-in user
     query = '''
-        SELECT p.product_name, c.quantity, p.unit_price, p.product_id 
-        FROM Cart as c
-        JOIN Products as p ON c.product_id = p.product_id
-        WHERE c.customer_id = (SELECT customer_id FROM Customer WHERE username = ?)
+        DELETE FROM Cart
+        WHERE customer_id = (SELECT customer_id FROM Customer WHERE username = ?)
+        AND product_id = ?
     '''
-    cursor.execute(query, (session['user'],))
-
-    cart_items = [
-        {
-            'name': row[0],
-            'quantity': row[1],
-            'price': row[2],
-            'id': row[3]
-        }
-        for row in cursor.fetchall()
-    ]
-
-    # Calculate total price
-    total = sum(item['price'] * item['quantity'] for item in cart_items)
-
+    cursor.execute(query, (session['user'], product_id))
+    conn.commit()
     cursor.close()
     conn.close()
+    return redirect(url_for('cart'))
 
-    return render_template('customer/cart.html', cart_items=cart_items, total=total)
+@app.route('/customer/home')
+def home():
+    return render_template('customer/home.html')
     
 
 @app.route('/customer/order_history')
@@ -229,16 +188,18 @@ def order_history():
     cursor = conn.cursor()
     
     query = '''
-        SELECT order_id, order_date, status, SUM(quantity * unit_price) AS total
-        FROM OrderDetails
-        GROUP BY order_id, order_date, status
+        SELECT p.product_name, order_date, status, SUM(o.quantity * o.unit_price) AS total
+        FROM OrderDetails as o
+        join Products as p 
+        on o.product_id=p.product_id
+        GROUP BY p.product_name, order_date, status
         ORDER BY order_date DESC;
     '''
     
     cursor.execute(query)
     orders = [
         {
-            'id': row[0],
+            'product_name': row[0],
             'date': row[1],
             'status': row[2],
             'total': row[3]
@@ -248,15 +209,23 @@ def order_history():
     
     cursor.close()
     conn.close()
-    return render_template('customer/order_history.html')
+    return render_template('customer/order_history.html',orders=orders)
 
 @app.route('/customer/subcategory')
 def subcategory():
     return render_template('customer/subcategory.html')
 
-@app.route('/customer/product')
+# @app.route('/customer/product')
+# def product():
+#     search_query = request.args.get('query')
+#     products = get_products(search_query) 
+#     return render_template('product.html', products=products, search_query=search_query)
+
+@app.route('/product.html')
 def product():
-    return render_template('customer/product.html')
+    search_query = request.args.get('query', '')  
+    products = get_products(search_query)
+    return render_template('product.html', products=products, search_query=search_query)
 
 @app.route('/rhome')
 @app.route('/retailer/current_orders')
@@ -327,33 +296,46 @@ def expired_products():
 def product_analysis():
     return render_template('retailer/product_analysis.html')
 
-@app.route('/retailer/restock')
+@app.route('/retailer/restock', methods=['GET', 'POST'])
 def restock():
-    conn=get_db_connection()
-    cursor=conn.cursor()
-    query='''
-        select p.product_name,i.stock_qty
-        from inventory as i
-        join 
-        products as p
-        on i.product_id=p.product_id
-        where stock_qty < 1;
+    conn = get_db_connection()
+    cursor = conn.cursor()
+ 
+    if request.method == 'POST':  # Handling form submission
+        product_id = request.form['product_id']  # Get product_id from hidden input
+        add_stock = int(request.form['add_stock'])  # Get entered quantity
+ 
+        # Update inventory with the new stock
+        update_query = '''
+            UPDATE Inventory
+            SET stock_qty = stock_qty + ?
+            WHERE product_id = ?;
+        '''
+        cursor.execute(update_query, (add_stock, product_id))
+        conn.commit()
+ 
+    # Fetch products that need restocking
+    fetch_query = '''
+        SELECT p.product_id, p.product_name, i.stock_qty
+        FROM Inventory AS i
+        JOIN Products AS p ON i.product_id = p.product_id
+        WHERE stock_qty < 110;
     '''
-
-    cursor.execute(query)
-
-    low_stock_products=[
+    cursor.execute(fetch_query)
+ 
+    low_stock_products = [
         {
-            'product_name':row[0],
-            'stock_qty':row[1]
+            'product_id': row[0],  
+            'product_name': row[1],
+            'stock_qty': row[2]
         }
         for row in cursor.fetchall()
     ]
-
+ 
     cursor.close()
     conn.close()
-
-    return render_template('retailer/restock.html',low_stock_products=low_stock_products)
+ 
+    return render_template('retailer/restock.html', low_stock_products=low_stock_products)
 
 if __name__ == "__main__":
     app.run(debug=True)

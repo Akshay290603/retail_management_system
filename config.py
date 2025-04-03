@@ -2,14 +2,12 @@ import pyodbc
 
 # SQL Server connection
 def get_db_connection():
-    # Replace with your actual details
-    server = 'NICESS-LP264'  # Your SQL Server name or IP address
-    database = 'retail management DB'  # Your database name
-    username = 'sa'  # Your SQL Server username
-    password = 'training@123'  # Your SQL Server password
+    
+    server = 'NICESS-LP264' 
+    database = 'retail management DB'
+    username = 'sa'  
+    password = 'training@123'  
 
-
-    # Establish connection using ODBC Driver 13 for SQL Server
     conn = pyodbc.connect(
         'DRIVER={ODBC Driver 13 for SQL Server};'
         f'SERVER={server};'
@@ -20,4 +18,25 @@ def get_db_connection():
 
     return conn
 
-
+def get_products(search_query):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = '''
+        SELECT product_id, product_name, description, unit_price, image_url
+        FROM Products
+        WHERE product_name LIKE ? OR description LIKE ?
+    '''
+    cursor.execute(query, ('%' + search_query + '%', '%' + search_query + '%'))
+    products = [
+        {
+            'id': row[0],
+            'name': row[1],
+            'description': row[2],
+            'price': row[3],
+            'image_url': row[4]
+        }
+        for row in cursor.fetchall()
+    ]
+    cursor.close()
+    conn.close()
+    return products

@@ -18,6 +18,7 @@
                 <td>{{ product.product_name}}</td>
                 <td>{{ product.stock_qty}}</td>
                 <td>
+                    <input type="hidden" name="product_id" value="{{ product.product_id }}">
                     <input type="number" name="add_stock" min="1" placeholder="Quantity">
                 </td>
                 <td>

@@ -3,6 +3,11 @@
 {% block content %}
 <div class="container">
     <h2>Your Cart</h2>
+    {% if error_message %}
+    <div class="alert alert-danger" role="alert">
+        {{ error_message }}
+    </div>
+    {% endif %}
     {% if cart_items %}
     <ul class="list-group mb-3">
         {% for item in cart_items %}
@@ -17,10 +22,11 @@
         {% endfor %}
     </ul>
     <p>Total: {{ total }} ₹</p>
-    <a href="/checkout" class="btn btn-primary">Proceed to Checkout</a>
+    <form action="/checkout" method="POST">
+        <button type="submit" class="btn btn-primary">Proceed to Checkout</button>
+    </form>
     {% else %}
     <p>Your cart is empty.</p>
     {% endif %}
 </div>
 {% endblock %}
-

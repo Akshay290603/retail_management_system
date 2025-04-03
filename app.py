@@ -33,6 +33,7 @@ def login():
         conn.close()
 
         if user and user[4] == password:
+            session['user_id']=user[0]
             session['user'] = user[2]
             session['user_type'] = user_type
             if user_type == "retailer":
@@ -228,6 +229,169 @@ def order_history():
     conn.close()
     return render_template('customer/order_history.html',orders=orders)
 
+# @app.route('/checkout', methods=['POST'])
+# def checkout():
+#     if 'user' not in session or session.get('user_type').lower() != 'customer':
+#         return redirect(url_for('login'))
+
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
+
+#     # Fetch cart items for the current customer
+#     customer_id = session.get('user_id')
+#     cursor.execute('''
+#         SELECT cart_id, product_id, quantity
+#         FROM Cart
+#         WHERE customer_id = ?;
+#     ''', (customer_id,))
+#     cart_items = cursor.fetchall()
+
+#     # Generate a new order ID
+#     cursor.execute('''
+#         INSERT INTO Orders (customer_id, order_date, status)
+#         VALUES (?, CURRENT_TIMESTAMP, 'Pending');
+#     ''', (customer_id,))
+#     conn.commit()
+
+#     # Get the generated order_id
+#     cursor.execute('SELECT SCOPE_IDENTITY();')
+#     order_id = cursor.fetchone()[0]
+
+#     print(f"Customer ID: {customer_id}")
+#     print(f"Order ID: {order_id}")
+#     for item in cart_items:
+#         print(f"Product ID: {item[1]}, Quantity: {item[2]}")
+
+#     # Insert cart items into OrderDetails and update Inventory
+#     for item in cart_items:
+#         # Fetch retailer_id and unit_price for each product from Inventory
+#         cursor.execute('''
+#             SELECT retailer_id, unit_price
+#             FROM Inventory
+#             JOIN Products ON Inventory.product_id = Products.product_id
+#             WHERE Inventory.product_id = ?;
+#         ''', (item[1],))  # Access the product_id correctly
+#         inventory_item = cursor.fetchone()
+
+#         if inventory_item:
+#             retailer_id = inventory_item[0]
+#             unit_price = inventory_item[1]
+
+#             # Insert into OrderDetails without specifying the identity column
+#             cursor.execute('''
+#                 INSERT INTO OrderDetails (retailer_id, customer_id, order_date, status, product_id, quantity, unit_price)
+#                 VALUES (?, ?, CURRENT_TIMESTAMP, 'Pending', ?, ?, ?);
+#             ''', (retailer_id, customer_id, item[1], item[2], unit_price))
+
+#             # Update Inventory
+#             cursor.execute('''
+#                 UPDATE Inventory
+#                 SET stock_qty = stock_qty - ?
+#                 WHERE product_id = ? AND retailer_id = ?;
+#             ''', (item[2], item[1], retailer_id))
+#         else:
+#             # Handle the case where there is no mapping
+#             print(f"No retailer found for product_id: {item[1]}")
+
+#     # Delete cart items after successful checkout
+#     cursor.execute('''
+#         DELETE FROM Cart
+#         WHERE customer_id = ?;
+#     ''', (customer_id,))
+#     conn.commit()
+
+#     cursor.close()
+#     conn.close()
+
+#     return redirect(url_for('order_history'))
+
+
+@app.route('/checkout', methods=['POST'])
+def checkout():
+    if 'user' not in session or session.get('user_type').lower() != 'customer':
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Fetch cart items for the current customer
+    customer_id = session.get('user_id')
+    customer_id = session.get('user_id')
+    cursor.execute('''
+        SELECT c.cart_id, c.product_id, c.quantity, p.product_name, p.unit_price
+        FROM Cart AS c
+        JOIN Products AS p ON c.product_id = p.product_id
+        WHERE c.customer_id = ?;
+    ''', (customer_id,))
+    cart_items = cursor.fetchall()
+
+    # Generate a new order ID
+    cursor.execute('''
+        INSERT INTO Orders (customer_id, order_date, status)
+        VALUES (?, CURRENT_TIMESTAMP, 'Pending');
+    ''', (customer_id,))
+    conn.commit()
+
+    # Get the generated order_id
+    cursor.execute('SELECT SCOPE_IDENTITY();')
+    order_id = cursor.fetchone()[0]
+
+    print(f"Customer ID: {customer_id}")
+    print(f"Order ID: {order_id}")
+    for item in cart_items:
+        print(f"Product ID: {item[1]}, Quantity: {item[2]}")
+
+    out_of_stock_products = []
+
+    # Insert cart items into OrderDetails and update Inventory
+    for item in cart_items:
+        # Fetch retailer_id and unit_price for each product from Inventory
+        cursor.execute('''
+            SELECT retailer_id, unit_price
+            FROM Inventory
+            JOIN Products ON Inventory.product_id = Products.product_id
+            WHERE Inventory.product_id = ?;
+        ''', (item[1],))  # Access the product_id correctly
+        inventory_item = cursor.fetchone()
+
+        if inventory_item:
+            retailer_id = inventory_item[0]
+            unit_price = inventory_item[1]
+
+            # Insert into OrderDetails without specifying the identity column
+            cursor.execute('''
+                INSERT INTO OrderDetails (retailer_id, customer_id, order_date, status, product_id, quantity, unit_price)
+                 VALUES (?, ?, CURRENT_TIMESTAMP, 'Pending', ?, ?, ?);
+             ''', (retailer_id, customer_id, item[1], item[2], unit_price))
+
+            # Update Inventory
+            cursor.execute('''
+                UPDATE Inventory
+                SET stock_qty = stock_qty - ?
+                WHERE product_id = ? AND retailer_id = ?;
+            ''', (item[2], item[1], retailer_id))
+        else:
+            # Add the product to the out_of_stock_products list
+            out_of_stock_products.append(item[1])
+            print(f"No retailer found for product_id: {item[1]}")
+
+    if out_of_stock_products:
+        # Handle the case where some products are out of stock
+        out_of_stock_message = "The following products are out of stock: " + ", ".join(map(str, out_of_stock_products))
+        return render_template('customer/cart.html', error_message=out_of_stock_message, cart_items=cart_items)
+
+    # Delete cart items after successful checkout
+    cursor.execute('''
+        DELETE FROM Cart
+        WHERE customer_id = ?;
+    ''', (customer_id,))
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    return redirect(url_for('order_history'))
+
 @app.route('/customer/product')
 def products_show():
     if 'user' not in session or session.get('user_type').lower() != 'customer':
@@ -332,17 +496,17 @@ def dashboard():
         return redirect(url_for('login'))
     return render_template('retailer/dashboard.html')
 
-@app.route('/retailer/expired_products')
-def expired_products():
-    if 'user' not in session or session.get('user_type').lower() != 'retailer':
-        return redirect(url_for('login'))
-    return render_template('retailer/expired_products.html')
+# @app.route('/retailer/expired_products')
+# def expired_products():
+#     if 'user' not in session or session.get('user_type').lower() != 'retailer':
+#         return redirect(url_for('login'))
+#     return render_template('retailer/expired_products.html')
 
-@app.route('/retailer/product_analysis')
-def product_analysis():
-    if 'user' not in session or session.get('user_type').lower() != 'retailer':
-        return redirect(url_for('login'))
-    return render_template('retailer/product_analysis.html')
+# @app.route('/retailer/product_analysis')
+# def product_analysis():
+#     if 'user' not in session or session.get('user_type').lower() != 'retailer':
+#         return redirect(url_for('login'))
+#     return render_template('retailer/product_analysis.html')
 
 @app.route('/retailer/restock', methods=['GET', 'POST'])
 def restock():

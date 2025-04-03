@@ -1,12 +1,146 @@
 {% extends "layout.html" %}
-
+ 
 {% block content %}
-<div class="container">
-    <h2>{{ product.name }}</h2>
-    <p>{{ product.description }}</p>
-    <p>Price: ${{ product.price }}</p>
-    <form action="/add_to_cart/{{ product.id }}" method="POST">
-        <button type="submit" class="btn btn-success">Add to Cart</button>
-    </form>
-</div>
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Products </h2>
+ 
+ 
+    
+    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-5 g-4 mt-4">
+       
+ 
+        {% for product in products %}
+            {% if product.subcategory_id == 1 %}
+                <div class="card">
+                    <!-- Image fetching condition -->
+                    <img src="{{ url_for('static', filename='products/electronics/mobiles/' + product.image_name + '.jpg') }}" class="card-img-top" alt="{{ product.name }}">
+   
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.product_name }}</h5>
+                        <p>Price: ${{ product.unit_price }}</p>
+                        <p class="card-text">{{ product.description }}</p>
+                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+       
+    <!-- <div class="row row-cols-1 row-cols-md-3 row-cols-lg-5 g-4 mt-4"> -->
+       
+ 
+        {% for product in products %}
+            {% if product.subcategory_id == 2 %}
+                <div class="card">
+                    <!-- Image fetching condition -->
+                    <img src="{{ url_for('static', filename='products/electronics/laptops/' + product.image_name + '.jpg') }}" class="card-img-top" alt="{{ product.name }}">
+       
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.product_name }}</h5>
+                        <p>Price: ${{ product.unit_price }}</p>
+                        <p class="card-text">{{ product.description }}</p>
+                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+ 
+        {% for product in products %}
+            {% if product.subcategory_id == 3 %}
+                <div class="card">
+                    <!-- Image fetching condition -->
+                    <img src="{{ url_for('static', filename='products/electronics/chargers/' + product.image_name + '.jpg') }}" class="card-img-top" alt="{{ product.name }}">
+       
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.product_name }}</h5>
+                        <p>Price: ${{ product.unit_price }}</p>
+                        <p class="card-text">{{ product.description }}</p>
+                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+ 
+        {% for product in products %}
+            {% if product.subcategory_id == 4 %}
+                <div class="card">
+                    <!-- Image fetching condition -->
+                    <img src="{{ url_for('static', filename='products/electronics/earphones/' + product.image_name + '.jpg') }}" class="card-img-top" alt="{{ product.name }}">
+       
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.product_name }}</h5>
+                        <p>Price: ${{ product.unit_price }}</p>
+                        <p class="card-text">{{ product.description }}</p>
+                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+ 
+        {% for product in products %}
+            {% if product.subcategory_id == 5 %}
+                <div class="card">
+                    <!-- Image fetching condition -->
+                    <img src="{{ url_for('static', filename='products/clothes/shirts/' + product.image_name + '.jpg') }}" class="card-img-top" alt="{{ product.name }}">
+       
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.product_name }}</h5>
+                        <p>Price: ${{ product.unit_price }}</p>
+                        <p class="card-text">{{ product.description }}</p>
+                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+ 
+        {% for product in products %}
+            {% if product.subcategory_id == 6 %}
+                <div class="card">
+                    <!-- Image fetching condition -->
+                    <img src="{{ url_for('static', filename='products/clothes/pants/' + product.image_name + '.jpg') }}" class="card-img-top" alt="{{ product.name }}">
+       
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.product_name }}</h5>
+                        <p>Price: ${{ product.unit_price }}</p>
+                        <p class="card-text">{{ product.description }}</p>
+                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+ 
+        {% for product in products %}
+            {% if product.subcategory_id == 7 %}
+                <div class="card">
+                    <!-- Image fetching condition -->
+                    <img src="{{ url_for('static', filename='products/food/snacks/' + product.image_name + '.jpg') }}" class="card-img-top" alt="{{ product.name }}">
+       
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.product_name }}</h5>
+                        <p>Price: ${{ product.unit_price }}</p>
+                        <p class="card-text">{{ product.description }}</p>
+                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+ 
+        {% for product in products %}
+            {% if product.subcategory_id == 8 %}
+                <div class="card">
+                    <!-- Image fetching condition -->
+                    <img src="{{ url_for('static', filename='products/food/grocery/' + product.image_name + '.jpg') }}" class="card-img-top" alt="{{ product.name }}">
+       
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.product_name }}</h5>
+                        <p>Price: ${{ product.unit_price }}</p>
+                        <p class="card-text">{{ product.description }}</p>
+                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+ 
+       
+       
 {% endblock %}
+ 

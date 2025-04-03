@@ -28,9 +28,11 @@
           Current Address
         </a>
         <div class="justify-content-center mx-auto navbar-collapse flex-grow-0">
-          <form class="d-flex" role="search">
-              <input class="form-control me-2" style="width: 400px;" type="search" placeholder="Search for electronics, food, clothing" aria-label="Search">
-              <button class="btn btn-outline-success" type="submit">Search</button>
+          <form method="get" action="/customer/product" class="">
+            <div class="input-group">
+                <input type="text" name="query" style="width: 400px;" class="form-control me-2" placeholder="Search products..." value="{{ request.args.get('query', '') }}">
+                <button type="submit" class="btn btn-outline-success">Search</button>
+            </div>
           </form>
         </div>
         <div class="collapse navbar-collapse flex-grow-0" id="navbarNav">

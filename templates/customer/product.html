@@ -4,7 +4,8 @@
 <div class="container mt-5">
     <h2 class="text-center mb-4">Products </h2>
  
- 
+    {{ request.args.get('query', '') }}
+
     
     <div class="row row-cols-1 row-cols-md-3 row-cols-lg-5 g-4 mt-4">
        

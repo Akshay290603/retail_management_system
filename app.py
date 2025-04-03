@@ -2,30 +2,10 @@ import pyodbc
 from flask import Flask, render_template, request, redirect, url_for, session
 from config import get_db_connection, get_products
 from werkzeug.security import generate_password_hash, check_password_hash
-# from flask_login import LoginManager, UserMixin, current_user, login_required
+
 
 app = Flask(__name__)
 app.secret_key = "1234"
-
-
-# SQL Server connection
-
-# def get_db_connection():
-    
-#     server = 'NICESS-LP264'  
-#     database = 'retail management DB' 
-#     username = 'sa' 
-#     password = 'training@123'  
-
-#     conn = pyodbc.connect(
-#         'DRIVER={ODBC Driver 13 for SQL Server};'
-#         f'SERVER={server};'
-#         f'DATABASE={database};'
-#         f'UID={username};'
-#         f'PWD={password};'
-#     )
-
-#     return conn
 
 @app.route('/')
 def index():
@@ -73,7 +53,7 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         address = request.form.get('address')
-        mobile =request.form.get('mobile_number')
+        mobile =request.form.get('mobile')
         user_type = request.form.get('user_type')
         store_name = request.form.get('store_name') if user_type == "retailer" else None
 
@@ -82,17 +62,17 @@ def register():
 
         if user_type == "retailer":
             query1 = '''
-                INSERT INTO Retailer (full_name, username, email, password, address, store_name) 
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO Retailer (full_name, username, email, password, address, mobile_number, store_name) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             '''
-            cursor.execute(query1, (name, username, email, password, address, store_name))
+            cursor.execute(query1, (name, username, email, password, address, mobile, store_name))
 
         else:
             query2 = '''
-                INSERT INTO Customer (full_name, username, email, password, address) 
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO Customer (full_name, username, email, password, address, mobile_number) 
+                VALUES (?, ?, ?, ?, ?, ?)
             '''
-            cursor.execute(query2, (name, username, email, password, address))
+            cursor.execute(query2, (name, username, email, password, address , mobile))
 
         conn.commit()
         cursor.close()
@@ -104,12 +84,17 @@ def register():
 
 @app.route('/logout') 
 def logout():
-    session.clear()
+    se=session.get('user_type').lower()
+    session.pop(se,None) 
+    print(se)
+    return 'session end Please login ' 
     return redirect(url_for('login'))
 
 @app.route('/chome')
 @app.route('/customer/category')
 def category():
+    if 'user' not in session or session.get('user_type').lower() != 'customer':
+        return redirect(url_for('login'))
     return render_template('customer/category.html')
 
 # @app.route('/customer/cart')
@@ -138,9 +123,8 @@ def category():
 
 @app.route('/customer/cart')
 def cart():
-    # if 'user' not in session or session.get('user_type') != 'Customer':
-    #     return redirect(url_for('login'))
-    
+    if 'user' not in session or session.get('user_type').lower() != 'customer':
+        return redirect(url_for('login'))
     conn = get_db_connection()
     cursor = conn.cursor()
     query = '''
@@ -160,8 +144,10 @@ def cart():
     return render_template('customer/cart.html', cart_items=cart_items, total=total)
 
 @app.route('/remove_from_cart/<int:product_id>', methods=['POST'])
+
+
 def remove_from_cart(product_id):
-    if 'user' not in session or session.get('user_type') != 'Customer':
+    if 'user' not in session or session.get('user_type').lower() != 'customer':
         return redirect(url_for('login'))
     
     conn = get_db_connection()
@@ -211,25 +197,46 @@ def order_history():
     conn.close()
     return render_template('customer/order_history.html',orders=orders)
 
-@app.route('/customer/subcategory')
-def subcategory():
-    return render_template('customer/subcategory.html')
+@app.route('/customer/product')
+def products_show():
+    if 'user' not in session or session.get('user_type').lower() != 'customer':
+        return redirect(url_for('login'))
+    conn = get_db_connection()
+    cursor = conn.cursor()
+ 
+    query = """
+        select product_name, description, unit_price, subcategory_id, image_name
+        from Products
+        where product_name like ? ;
+    """
+    search_query = request.args.get('query', '')
+    cursor.execute(query, ('%' + search_query + '%',))
+    products = [
+        {
+            'product_name': row[0],
+            'description': row[1],
+            'unit_price': row[2],
+            'subcategory_id': row[3],
+            'image_name': row[4]
+        }
+        for row in cursor.fetchall()
+    ]
+ 
+    cursor.close()
+    conn.close()
+    return render_template('customer/product.html', products=products)
 
-# @app.route('/customer/product')
+# @app.route('/product.html')
 # def product():
-#     search_query = request.args.get('query')
-#     products = get_products(search_query) 
+#     search_query = request.args.get('query', '')  
+#     products = get_products(search_query)
 #     return render_template('product.html', products=products, search_query=search_query)
-
-@app.route('/product.html')
-def product():
-    search_query = request.args.get('query', '')  
-    products = get_products(search_query)
-    return render_template('product.html', products=products, search_query=search_query)
 
 @app.route('/rhome')
 @app.route('/retailer/current_orders')
 def current_orders():
+    if 'user' not in session or session.get('user_type').lower() != 'retailer':
+        return redirect(url_for('login'))
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -259,6 +266,8 @@ def current_orders():
 
 @app.route('/retailer/customer_management')
 def customer_management():
+    if 'user' not in session or session.get('user_type').lower() != 'retailer':
+        return redirect(url_for('login'))
     conn=get_db_connection()
     cursor=conn.cursor()
 
@@ -286,18 +295,26 @@ def customer_management():
 
 @app.route('/retailer/dashboard')
 def dashboard():
+    if 'user' not in session or session.get('user_type').lower() != 'retailer':
+        return redirect(url_for('login'))
     return render_template('retailer/dashboard.html')
 
 @app.route('/retailer/expired_products')
 def expired_products():
+    if 'user' not in session or session.get('user_type').lower() != 'retailer':
+        return redirect(url_for('login'))
     return render_template('retailer/expired_products.html')
 
 @app.route('/retailer/product_analysis')
 def product_analysis():
+    if 'user' not in session or session.get('user_type').lower() != 'retailer':
+        return redirect(url_for('login'))
     return render_template('retailer/product_analysis.html')
 
 @app.route('/retailer/restock', methods=['GET', 'POST'])
 def restock():
+    if 'user' not in session or session.get('user_type').lower() != 'retailer':
+        return redirect(url_for('login'))
     conn = get_db_connection()
     cursor = conn.cursor()
  

@@ -14,7 +14,7 @@ def index():
 
 @app.route('/layout')
 def layout():
-    return render_template('layout.html')
+    return render_template('layout.html',address=session.get('user_address','No address found'))
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -47,37 +47,49 @@ def login():
         else:
             return "Invalid Credentials"
     return render_template("login.html")
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    errors={}
+    errors = {}
     if request.method == 'POST':
         name = request.form.get('full_name')
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
         address = request.form.get('address')
-        mobile =request.form.get('mobile')
+        mobile = request.form.get('mobile')
         user_type = request.form.get('user_type')
         store_name = request.form.get('store_name') if user_type == "retailer" else None
- 
 
         # Validate username
         if not username:
             errors['username'] = "Username is required!"
- 
+
         # Validate password
         if not re.match(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', password):
             errors['password'] = "Password must be at least 8 characters long, with uppercase, lowercase, a number, and a special character."
- 
+
         # Validate mobile number
         if not re.match(r'^\d{10}$', mobile):
             errors['mobile'] = "Mobile number must be exactly 10 digits."
- 
-        if errors:
-            return render_template('register.html', errors=errors)
 
         conn = get_db_connection()
         cursor = conn.cursor()
+
+        # Check for duplicate username
+        cursor.execute('SELECT username FROM Retailer WHERE username = ? UNION SELECT username FROM Customer WHERE username = ?', (username, username))
+        if cursor.fetchone():
+            errors['username'] = "Username already exists. Please choose a different username."
+
+        # Check for duplicate email
+        cursor.execute('SELECT email FROM Retailer WHERE email = ? UNION SELECT email FROM Customer WHERE email = ?', (email, email))
+        if cursor.fetchone():
+            errors['email'] = "Email already exists. Please use a different email."
+
+        if errors:
+            cursor.close()
+            conn.close()
+            return render_template('register.html', errors=errors)
 
         if user_type == "retailer":
             query1 = '''
@@ -85,21 +97,75 @@ def register():
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             '''
             cursor.execute(query1, (name, username, email, password, address, mobile, store_name))
- 
+
         else:
             query2 = '''
                 INSERT INTO Customer (full_name, username, email, password, address, mobile_number)
                 VALUES (?, ?, ?, ?, ?, ?)
             '''
-            cursor.execute(query2, (name, username, email, password, address , mobile))
- 
+            cursor.execute(query2, (name, username, email, password, address, mobile))
+
         conn.commit()
         cursor.close()
         conn.close()
- 
+
         return redirect(url_for('login'))
+
+    return render_template("register.html", errors=errors)
+
+# @app.route('/register', methods=['GET', 'POST'])
+# def register():
+#     errors={}
+#     if request.method == 'POST':
+#         name = request.form.get('full_name')
+#         username = request.form.get('username')
+#         email = request.form.get('email')
+#         password = request.form.get('password')
+#         address = request.form.get('address')
+#         mobile =request.form.get('mobile')
+#         user_type = request.form.get('user_type')
+#         store_name = request.form.get('store_name') if user_type == "retailer" else None
  
-    return render_template("register.html",errors=errors)
+
+#         # Validate username
+#         if not username:
+#             errors['username'] = "Username is required!"
+ 
+#         # Validate password
+#         if not re.match(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', password):
+#             errors['password'] = "Password must be at least 8 characters long, with uppercase, lowercase, a number, and a special character."
+ 
+#         # Validate mobile number
+#         if not re.match(r'^\d{10}$', mobile):
+#             errors['mobile'] = "Mobile number must be exactly 10 digits."
+ 
+#         if errors:
+#             return render_template('register.html', errors=errors)
+
+#         conn = get_db_connection()
+#         cursor = conn.cursor()
+
+#         if user_type == "retailer":
+#             query1 = '''
+#                 INSERT INTO Retailer (full_name, username, email, password, address, mobile_number, store_name)
+#                 VALUES (?, ?, ?, ?, ?, ?, ?)
+#             '''
+#             cursor.execute(query1, (name, username, email, password, address, mobile, store_name))
+ 
+#         else:
+#             query2 = '''
+#                 INSERT INTO Customer (full_name, username, email, password, address, mobile_number)
+#                 VALUES (?, ?, ?, ?, ?, ?)
+#             '''
+#             cursor.execute(query2, (name, username, email, password, address , mobile))
+ 
+#         conn.commit()
+#         cursor.close()
+#         conn.close()
+ 
+#         return redirect(url_for('login'))
+ 
+#     return render_template("register.html",errors=errors)
 
 # @app.route('/register', methods=['GET', 'POST'])
 # def register():
@@ -246,25 +312,24 @@ def update_order_status():
 
 
 def fetch_user_address():
-    if 'user' in session: 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-       
-        query = "SELECT address FROM Customer WHERE username = ?;"  
-        cursor.execute(query, (session.get('user'),))
-       
-        customer_address = cursor.fetchone()  
-       
-        cursor.close()
-        conn.close()
+    if 'user' in session:
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
  
-        if customer_address:
-            session.get('address') == customer_address[0]  # Store in session
-            print(f"User address fetched: {session.get('address')}")  # Debugging print
-        else:
-            print("No address found for user:", session['user'])  # Debugging print
-    else:
-        print("User not logged in.")
+            query = "SELECT address FROM Customer WHERE username = ?;"
+            cursor.execute(query, (session['user'],))
+            customer_address = cursor.fetchone()
+ 
+            session['user_address'] = customer_address[0] if customer_address else "No address found"
+ 
+        except Exception as e:
+            print("Error fetching user address:", e)
+            session['user_address'] = "Error fetching address"
+ 
+        finally:
+            cursor.close()
+            conn.close()
  
 
 @app.route('/logout') 

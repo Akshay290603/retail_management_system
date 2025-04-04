@@ -31,10 +31,13 @@
         <div class="mb-3">
           <label for="email" class="form-label">Email</label>
           <input type="email" class="form-control" name="email" id="email" placeholder="Enter your email" required>
+          {% if errors and 'email' in errors %}
+          <small class="error text-danger">{{ errors['email'] }}</small>
+          {% endif %}
         </div>
         <div class="mb-3">
           <label for="password" class="form-label">Password</label>
-          <input  type="password" class="form-control" name="password" id="password" placeholder="Enter your password" required>
+          <input type="password" class="form-control" name="password" id="password" placeholder="Enter your password" required>
           {% if errors and 'password' in errors %}
           <small class="error text-danger">{{ errors['password'] }}</small>
           {% endif %}
@@ -42,7 +45,8 @@
         <div class="mb-3">
           <label for="address" class="form-label">Address</label>
           <textarea class="form-control" name="address" id="address" rows="3" placeholder="Enter your address" required></textarea>
-        </div class="mb-3">
+        </div>
+        <div class="mb-3">
           <label for="mobile" class="form-label">Mobile Number</label>
           <input type="text" class="form-control" name="mobile" id="mobile" placeholder="Enter your mobile number" required>
           {% if errors and 'mobile' in errors %}

@@ -24,10 +24,10 @@
             aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
           </button>
-          <!-- <a class="navbar-brand">
+          <a class="navbar-brand">
             <img src="{{ url_for('static', filename='navbar_icons/location.png') }}" alt="location-logo" width="24" height="24">
             {{ address }}
-          </a> -->
+          </a>
           <div class="justify-content-center mx-auto navbar-collapse flex-grow-0">
             <form method="get" action="/customer/product" class="">
               <div class="input-group">
@@ -44,13 +44,13 @@
               <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('order_history') }}">Order History</a>
               </li>
+              <a class="navbar-brand" href="{{ url_for('cart') }}">
+                <img src="{{ url_for('static', filename='navbar_icons/shopping-cart.png') }}" alt="cart-logo" width="30" height="24">
+              </a>
               <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
               </li>
             </ul>
-            <a class="navbar-brand" href="{{ url_for('cart') }}">
-              <img src="{{ url_for('static', filename='navbar_icons/shopping-cart.png') }}" alt="cart-logo" width="30" height="24">
-            </a>
           </div>
         </div>
       </nav>

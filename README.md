@@ -125,11 +125,14 @@
 
 * Checkout functionality (if item in stock then order & put the order into the orders table & substract that perticular item from the inventory of available retailer ) ✅
 * inventory creation for retailer ✅
-* password, mobile , username parameters assignment
-* system testing
+* password, mobile , username parameters assignment ✅
+* system testing ✅
+* flow char ✅
 
 ## Samhita
 
-* image navigation
+* image navigation ✅
 * power bi Dashboard creation and integration to the website (temp with dummy data)
+* ppt ✅
+
 

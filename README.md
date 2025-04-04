@@ -1,4 +1,4 @@
-﻿# **Retail Management System**
+﻿# **Retail Management System + E-commerce website(customer)**
 
 <br>
 <br>
@@ -65,7 +65,7 @@
 <br>
 
 * products page ✅
-* product page database connections (halfy done : database connection and dynamism with jinja template ) 
+* product page database connections (halfy done : database connection and dynamism with jinja template ) ✅
 
 <br>
 
@@ -100,10 +100,10 @@
 
 <br>
 
-* search bar handling
+* search bar handling ✅
 * order History  ✅
-* cart 
-* credential handling
+* cart ✅
+* credential handling ✅
 
 <br>
 
@@ -111,8 +111,25 @@
 
 <br>
 
-* DashBoard
-* products updation
-* customized navbar (diffenrent for customer and retailer)
+* DashBoard 
+* products updation ✅
+* customized navbar (diffenrent for customer and retailer) ✅
 
 <br>
+
+### _**04-04-2025**_ (Mid Night + half day )
+
+<br>
+
+## Akshay 
+
+* Checkout functionality (if item in stock then order & put the order into the orders table & substract that perticular item from the inventory of available retailer ) ✅
+* inventory creation for retailer ✅
+* password, mobile , username parameters assignment
+* system testing
+
+## Samhita
+
+* image navigation
+* power bi Dashboard creation and integration to the website (temp with dummy data)
+

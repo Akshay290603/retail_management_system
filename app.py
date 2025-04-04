@@ -1,5 +1,6 @@
 import pyodbc
-from flask import Flask, render_template, request, redirect, url_for, session
+import re
+from flask import Flask, render_template, request, redirect, url_for, session,flash
 from config import get_db_connection, get_products
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -45,43 +46,44 @@ def login():
             return "Invalid Credentials"
     return render_template("login.html")
 
-  
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    errors = {}
+ 
     if request.method == 'POST':
-        name = request.form.get('full_name')
         username = request.form.get('username')
-        email = request.form.get('email')
         password = request.form.get('password')
-        address = request.form.get('address')
-        mobile =request.form.get('mobile')
-        user_type = request.form.get('user_type')
-        store_name = request.form.get('store_name') if user_type == "retailer" else None
-
+        mobile = request.form.get('mobile')
+ 
+        # Validate username
+        if not username:
+            errors['username'] = "Username is required!"
+ 
+        # Validate password
+        if not re.match(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', password):
+            errors['password'] = "Password must be at least 8 characters long, with uppercase, lowercase, a number, and a special character."
+ 
+        # Validate mobile number
+        if not re.match(r'^\d{10}$', mobile):
+            errors['mobile'] = "Mobile number must be exactly 10 digits."
+ 
+        if errors:
+            return render_template('register.html', errors=errors)
+ 
+        # Proceed with database insertion if no errors
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        if user_type == "retailer":
-            query1 = '''
-                INSERT INTO Retailer (full_name, username, email, password, address, mobile_number, store_name) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            '''
-            cursor.execute(query1, (name, username, email, password, address, mobile, store_name))
-
-        else:
-            query2 = '''
-                INSERT INTO Customer (full_name, username, email, password, address, mobile_number) 
-                VALUES (?, ?, ?, ?, ?, ?)
-            '''
-            cursor.execute(query2, (name, username, email, password, address , mobile))
-
+        query = "INSERT INTO Customer (username, password, mobile_number) VALUES (?, ?, ?)"
+        cursor.execute(query, (username, password, mobile))
         conn.commit()
         cursor.close()
         conn.close()
-
+ 
+        flash("Registration successful!", "success")
         return redirect(url_for('login'))
-
-    return render_template("register.html")
+ 
+    return render_template("register.html", errors={})
 
 @app.route('/logout') 
 def logout():
@@ -377,7 +379,7 @@ def checkout():
 
     if out_of_stock_products:
         # Handle the case where some products are out of stock
-        out_of_stock_message = "The following products are out of stock: " + ", ".join(map(str, out_of_stock_products))
+        out_of_stock_message = "The following products are out of stock: " 
         return render_template('customer/cart.html', error_message=out_of_stock_message, cart_items=cart_items)
 
     # Delete cart items after successful checkout
@@ -460,6 +462,53 @@ def current_orders():
     cursor.close()
     conn.close()
     return render_template('retailer/current_orders.html', orders=orders)
+
+@app.route('/retailer/inventory', methods=['GET', 'POST'])
+def manage_inventory():
+    if 'user' not in session or session.get('user_type').lower() != 'retailer':
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        product_id = request.form['product_id']
+        stock_qty = int(request.form['stock_qty'])
+        retailer_id = session.get('user_id')
+
+        # Insert or update the inventory
+        cursor.execute('''
+            IF EXISTS (SELECT 1 FROM Inventory WHERE product_id = ? AND retailer_id = ?)
+            BEGIN
+                UPDATE Inventory
+                SET stock_qty = stock_qty + ?
+                WHERE product_id = ? AND retailer_id = ?;
+            END
+            ELSE
+            BEGIN
+                INSERT INTO Inventory (product_id, retailer_id, stock_qty, reorder_level)
+                VALUES (?, ?, ?, 10);
+            END
+        ''', (product_id, retailer_id, stock_qty, product_id, retailer_id, product_id, retailer_id, stock_qty))
+        conn.commit()
+
+    # Fetch all products for the dropdown
+    cursor.execute('SELECT product_id, product_name FROM Products')
+    products = cursor.fetchall()
+
+    # Fetch the retailer's inventory
+    cursor.execute('''
+        SELECT p.product_name, i.stock_qty, i.reorder_level
+        FROM Inventory AS i
+        JOIN Products AS p ON i.product_id = p.product_id
+        WHERE i.retailer_id = ?;
+    ''', (session.get('user_id'),))
+    inventory_items = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template('retailer/inventory.html', products=products, inventory_items=inventory_items)
 
 @app.route('/retailer/customer_management')
 def customer_management():

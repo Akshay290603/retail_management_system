@@ -1,4 +1,4 @@
-﻿# **Retail Management System**
+﻿# **Retail Management System + E-commerce website(customer)**
 
 <br>
 <br>

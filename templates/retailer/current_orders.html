@@ -12,9 +12,15 @@
      
       <div class="collapse navbar-collapse flex-grow-0" id="navbarNav">
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('customer_management')}}">Customer Management</a>
-          </li>        
+          <!-- <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('customer_management')}}">Customer Management</a>
+            </li>         -->
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('current_orders')}}">Home</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('manage_inventory')}}">Inventory</a>
+            </li>   
           <li class="nav-item">
             <a class="nav-link" href="{{ url_for('restock')}}">Restock</a>
           </li>          
@@ -22,13 +28,9 @@
             <a class="nav-link" href="{{ url_for('dashboard')}}">Dashboard</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('current_orders')}}">Home</a>
-          </li>        
-          <li class="nav-item">
             <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
           </li>
         </ul>
-       
       </div>
     </div>
   </nav>
@@ -50,6 +52,7 @@
                         <th scope="col">Unit Price</th>
                         <th scope="col">Status</th>
                         <th scope="col">Order Date</th>
+                        <th scope="col">Update Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -71,6 +74,18 @@
                             {% endif %}
                         </td>
                         <td>{{ order.order_date }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('update_order_status') }}">
+                                <input type="hidden" name="order_id" value="{{ order.order_id }}">
+                                <select class="form-select mb-2" name="status" required>
+                                    <option value="">Select status</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                            </form>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

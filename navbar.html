@@ -1,0 +1,39 @@
+{% block navbar %}
+<header>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="{{ url_for('chome') }}">SaKsHaM Store</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <a class="navbar-brand ">
+        <img src="{{ url_for('static',filename='navbar_icons/location.png') }}" alt="cart-logo" width="24" height="24" class="">
+        Current Address
+      </a>
+      <div class="justify-content-center mx-auto navbar-collapse flex-grow-0">
+        <form method="get" action="/customer/product" class="">
+          <div class="input-group">
+              <input type="text" name="query" style="width: 400px;" class="form-control me-2" placeholder="Search products..." value="{{ request.args.get('query', '') }}">
+              <button type="submit" class="btn btn-outline-success">Search</button>
+          </div>
+        </form>
+      </div>
+      <div class="collapse navbar-collapse flex-grow-0" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+         
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+          </li>
+        </ul>
+        <a class="navbar-brand " href="{{url_for('cart')}}">
+          <img src="{{ url_for('static',filename='navbar_icons/shopping-cart.png') }}" alt="cart-logo" width="30" height="24">
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+{% endblock navbar %}

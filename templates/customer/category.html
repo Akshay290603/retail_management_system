@@ -1,12 +1,16 @@
 
 {% extends "layout.html" %}
+ 
+{% block title %}
+    SaKsHaM Store        
+{% endblock %}
 
 {% block content %}
-
-
-
+ 
+ 
+ 
 <!-- SLIDE  -->
-
+ 
 <div id="carouselExampleIndicators" class="carousel slide">
     <div class="carousel-indicators">
       <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
@@ -33,9 +37,9 @@
       <span class="visually-hidden">Next</span>
     </button>
   </div>
-
+ 
     <!-- CATEGORY CARFS -->
-
+ 
     <div class="container mt-5">
         <div class="row">
             <!-- Electronics Category -->
@@ -45,20 +49,20 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-6 d-flex flex-column align-items-center">
-                                <a href="customer/sucategory.html"><img src="{{ url_for('static', filename='assets/mobile.jpg') }}" class="img-fluid fixed-img" alt="Mobile Phones">
+                                <a href="{{ url_for('subcategory', subcategory='mobile') }}"><img src="{{ url_for('static', filename='assets/mobile.jpg') }}" class="img-fluid fixed-img" alt="Mobile Phones">
                                 </a>
                                 <p class="text-center">Mobiles</p>
                             </div>
                             <div class="col-6 d-flex flex-column align-items-center">
-                                <a href="customer\sucategory.html"><img src="{{ url_for('static', filename='assets/charger.jpg') }}" class="img-fluid fixed-img" alt="Charger"></a>
+                                <a href="{{ url_for('subcategory', subcategory='charger') }}"><img src="{{ url_for('static', filename='assets/charger.jpg') }}" class="img-fluid fixed-img" alt="Charger"></a>
                                 <p class="text-center">Chargers</p>
                             </div>
                             <div class="col-6 d-flex flex-column align-items-center">
-                                <a href="customer\sucategory.html"><img src="{{ url_for('static', filename='assets/laptop.jpg') }}" class="img-fluid fixed-img" alt="Laptop"></a>
+                                <a href="{{ url_for('subcategory', subcategory='laptop') }}"><img src="{{ url_for('static', filename='assets/laptop.jpg') }}" class="img-fluid fixed-img" alt="Laptop"></a>
                                 <p class="text-center">Loptops</p>
                             </div>
                             <div class="col-6 d-flex flex-column align-items-center">
-                                <a href="customer\sucategory.html"><img src="{{ url_for('static', filename='assets/earphones.jpg') }}" class="img-fluid fixed-img" alt="Earphone"></a>
+                                <a href="{{ url_for('subcategory', subcategory='earphone') }}"><img src="{{ url_for('static', filename='assets/earphones.jpg') }}" class="img-fluid fixed-img" alt="Earphone"></a>
                                 <p class="text-center">Earphones</p>
                             </div>
                         </div>
@@ -69,7 +73,7 @@
                     </div>
                 </div>
             </div>
-
+ 
             <!-- Food Category -->
             <div class="col-md-4">
                 <div class="card">
@@ -77,12 +81,12 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-6 d-flex flex-column align-items-center">
-                                <a href="customer/sucategory.html"><img src="{{ url_for('static', filename='assets/snacks.jpg') }}" class="img-fluid fixed-img" alt="Mobile Phones">
+                                <a href="{{ url_for('subcategory', subcategory='snacks') }}"><img src="{{ url_for('static', filename='assets/snacks.jpg') }}" class="img-fluid fixed-img" alt="Mobile Phones">
                                 </a>
                                 <p class="text-center">Snacks</p>
                             </div>
                             <div class="col-6 d-flex flex-column align-items-center">
-                                <a href="customer/sucategory.html"><img src="{{ url_for('static', filename='assets/groceries.jpg') }}" class="img-fluid fixed-img" alt="Mobile Phones">
+                                <a href="{{ url_for('subcategory', subcategory='grocery') }}"><img src="{{ url_for('static', filename='assets/groceries.jpg') }}" class="img-fluid fixed-img" alt="Mobile Phones">
                                 </a>
                                 <p class="text-center">Groceries</p>
                             </div>
@@ -94,7 +98,7 @@
                     </div>
                 </div>
             </div>
-
+ 
             <!-- Clothing Category -->
             <div class="col-md-4">
                 <div class="card">
@@ -102,12 +106,12 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-6 d-flex flex-column align-items-center">
-                                <a href="customer/sucategory.html"><img src="{{ url_for('static', filename='assets/shirt.jpg') }}" class="img-fluid fixed-img" alt="shirt">
+                                <a href="{{ url_for('subcategory', subcategory='shirt') }}"><img src="{{ url_for('static', filename='assets/shirt.jpg') }}" class="img-fluid fixed-img" alt="shirt">
                                 </a>
                                 <p class="text-center">Shirts</p>
                             </div>
                             <div class="col-6 d-flex flex-column align-items-center">
-                                <a href="customer/sucategory.html"><img src="{{ url_for('static', filename='assets/pants.jpeg') }}" class="img-fluid fixed-img" alt="Pants">
+                                <a href="{{ url_for('subcategory', subcategory='pants') }}"><img src="{{ url_for('static', filename='assets/pants.jpeg') }}" class="img-fluid fixed-img" alt="Pants">
                                 </a>
                                 <p class="text-center">Pants</p>
                             </div>
@@ -121,12 +125,12 @@
             </div>
         </div>
     </div>
-
+ 
     <!-- <style>
         .fixed-img {
-            width: 100px; 
-            height: 100px; 
-            object-fit: cover; 
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
             display: flex;
             flex-direction: column;
             align-items: center;

@@ -1,5 +1,9 @@
 {% extends "layout.html" %}
  
+{% block title %}
+    SaKsHaM Store        
+{% endblock %}
+
 {% block content %}
 <div class="container mt-5">
     <h2 class="text-center mb-4">Products </h2>
@@ -18,7 +22,7 @@
    
                     <div class="card-body">
                         <h5 class="card-title">{{ product.product_name }}</h5>
-                        <p>Price: ${{ product.unit_price }}</p>
+                        <p>Price: {{ product.unit_price }} ₹</p>
                         <p class="card-text">{{ product.description }}</p>
                         <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
                           <button type="submit" class="btn btn-success">Add to Cart</button>
@@ -39,7 +43,7 @@
        
                     <div class="card-body">
                         <h5 class="card-title">{{ product.product_name }}</h5>
-                        <p>Price: ${{ product.unit_price }}</p>
+                        <p>Price: {{ product.unit_price }} ₹</p>
                         <p class="card-text">{{ product.description }}</p>
                         <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
                           <button type="submit" class="btn btn-success">Add to Cart</button>
@@ -57,7 +61,7 @@
        
                     <div class="card-body">
                         <h5 class="card-title">{{ product.product_name }}</h5>
-                        <p>Price: ${{ product.unit_price }}</p>
+                        <p>Price: {{ product.unit_price }} ₹</p>
                         <p class="card-text">{{ product.description }}</p>
                         <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
                           <button type="submit" class="btn btn-success">Add to Cart</button>
@@ -75,7 +79,7 @@
        
                     <div class="card-body">
                         <h5 class="card-title">{{ product.product_name }}</h5>
-                        <p>Price: ${{ product.unit_price }}</p>
+                        <p>Price: {{ product.unit_price }} ₹</p>
                         <p class="card-text">{{ product.description }}</p>
                         <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
                           <button type="submit" class="btn btn-success">Add to Cart</button>
@@ -93,7 +97,7 @@
        
                     <div class="card-body">
                         <h5 class="card-title">{{ product.product_name }}</h5>
-                        <p>Price: ${{ product.unit_price }}</p>
+                        <p>Price: {{ product.unit_price }} ₹</p>
                         <p class="card-text">{{ product.description }}</p>
                         <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
                           <button type="submit" class="btn btn-success">Add to Cart</button>
@@ -111,7 +115,7 @@
        
                     <div class="card-body">
                         <h5 class="card-title">{{ product.product_name }}</h5>
-                        <p>Price: ${{ product.unit_price }}</p>
+                        <p>Price: {{ product.unit_price }} ₹</p>
                         <p class="card-text">{{ product.description }}</p>
                         <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
                           <button type="submit" class="btn btn-success">Add to Cart</button>
@@ -129,7 +133,7 @@
        
                     <div class="card-body">
                         <h5 class="card-title">{{ product.product_name }}</h5>
-                        <p>Price: ${{ product.unit_price }}</p>
+                        <p>Price: {{ product.unit_price }} ₹</p>
                         <p class="card-text">{{ product.description }}</p>
                         <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
                           <button type="submit" class="btn btn-success">Add to Cart</button>
@@ -147,7 +151,7 @@
        
                     <div class="card-body">
                         <h5 class="card-title">{{ product.product_name }}</h5>
-                        <p>Price: ${{ product.unit_price }}</p>
+                        <p>Price: {{ product.unit_price }}₹</p>
                         <p class="card-text">{{ product.description }}</p>
                         <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST">
                           <button type="submit" class="btn btn-success">Add to Cart</button>

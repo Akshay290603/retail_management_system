@@ -1,8 +1,8 @@
-import pyodbc
+# import pyodbc
 import re
 from flask import Flask, render_template, request, redirect, url_for, session,flash
 from config import get_db_connection, get_products
-from werkzeug.security import generate_password_hash, check_password_hash
+# from werkzeug.security import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__)
@@ -15,6 +15,7 @@ def index():
 @app.route('/layout')
 def layout():
     return render_template('layout.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -37,25 +38,29 @@ def login():
             session['user_id']=user[0]
             session['user'] = user[2]
             session['user_type'] = user_type
+            session['address']= user[5]
             if user_type == "retailer":
-                session['store_name'] = user[5]
+                session['store_name'] = user[7]
                 return redirect(url_for('current_orders'))
             else:
                 return redirect(url_for('category'))
         else:
             return "Invalid Credentials"
     return render_template("login.html")
-
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    errors = {}
- 
+    errors={}
     if request.method == 'POST':
+        name = request.form.get('full_name')
         username = request.form.get('username')
+        email = request.form.get('email')
         password = request.form.get('password')
-        mobile = request.form.get('mobile')
+        address = request.form.get('address')
+        mobile =request.form.get('mobile')
+        user_type = request.form.get('user_type')
+        store_name = request.form.get('store_name') if user_type == "retailer" else None
  
+
         # Validate username
         if not username:
             errors['username'] = "Username is required!"
@@ -70,26 +75,201 @@ def register():
  
         if errors:
             return render_template('register.html', errors=errors)
- 
-        # Proceed with database insertion if no errors
+
         conn = get_db_connection()
         cursor = conn.cursor()
-        query = "INSERT INTO Customer (username, password, mobile_number) VALUES (?, ?, ?)"
-        cursor.execute(query, (username, password, mobile))
+
+        if user_type == "retailer":
+            query1 = '''
+                INSERT INTO Retailer (full_name, username, email, password, address, mobile_number, store_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            '''
+            cursor.execute(query1, (name, username, email, password, address, mobile, store_name))
+ 
+        else:
+            query2 = '''
+                INSERT INTO Customer (full_name, username, email, password, address, mobile_number)
+                VALUES (?, ?, ?, ?, ?, ?)
+            '''
+            cursor.execute(query2, (name, username, email, password, address , mobile))
+ 
         conn.commit()
         cursor.close()
         conn.close()
  
-        flash("Registration successful!", "success")
         return redirect(url_for('login'))
  
-    return render_template("register.html", errors={})
+    return render_template("register.html",errors=errors)
+
+# @app.route('/register', methods=['GET', 'POST'])
+# def register():
+#     errors = {}
+#     if request.method == 'POST':
+#         name = request.form.get('full_name')
+#         username = request.form.get('username')
+#         email = request.form.get('email')
+#         password = request.form.get('password')
+#         address = request.form.get('address')
+#         mobile =request.form.get('mobile')
+#         user_type = request.form.get('user_type')
+#         store_name = request.form.get('store_name') if user_type == "retailer" else None
+    
+#         # Validate username
+#         if not username:
+#             errors['username'] = "Username is required!"
+ 
+#         # Validate password
+#         if not re.match(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', password):
+#             errors['password'] = "Password must be at least 8 characters long, with uppercase, lowercase, a number, and a special character."
+ 
+#         # Validate mobile number
+#         if not re.match(r'^\d{10}$', mobile):
+#             errors['mobile'] = "Mobile number must be exactly 10 digits."
+ 
+#         if errors:
+#             return render_template('register.html', errors=errors)
+ 
+
+#         conn = get_db_connection()
+#         cursor = conn.cursor()
+ 
+#         if user_type == "retailer":
+#             query1 = '''
+#                 INSERT INTO Retailer (full_name, username, email, password, address, mobile_number, store_name)
+#                 VALUES (?, ?, ?, ?, ?, ?, ?)
+#             '''
+#             cursor.execute(query1, (name, username, email, password, address, mobile, store_name))
+ 
+#         else:
+#             query2 = '''
+#                 INSERT INTO Customer (full_name, username, email, password, address, mobile_number)
+#                 VALUES (?, ?, ?, ?, ?, ?)
+#             '''
+#             cursor.execute(query2, (name, username, email, password, address , mobile))
+ 
+#         conn.commit()
+#         cursor.close()
+#         conn.close()
+ 
+#         return redirect(url_for('login'))
+ 
+#     return render_template("register.html", errors={})
+
+
+# @app.route('/register', methods=['GET', 'POST'])
+# def register():
+#     errors = {}
+ 
+#     if request.method == 'POST':
+#         name = request.form.get('full_name')
+#         username = request.form.get('username')
+#         email = request.form.get('email')
+#         password = request.form.get('password')
+#         address = request.form.get('address')
+#         mobile =request.form.get('mobile')
+#         user_type = request.form.get('user_type')
+#         store_name = request.form.get('store_name') if user_type == "retailer" else None
+ 
+#         # Validate username
+#         if not username:
+#             errors['username'] = "Username is required!"
+ 
+#         # Validate password
+#         if not re.match(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', password):
+#             errors['password'] = "Password must be at least 8 characters long, with uppercase, lowercase, a number, and a special character."
+ 
+#         # Validate mobile number
+#         if not re.match(r'^\d{10}$', mobile):
+#             errors['mobile'] = "Mobile number must be exactly 10 digits."
+ 
+#         if errors:
+#             return render_template('register.html', errors=errors)
+ 
+#         # Proceed with database insertion if no errors
+#         conn = get_db_connection()
+#         cursor = conn.cursor()
+#         if user_type == "retailer":
+#             query1 = '''
+#                 INSERT INTO Retailer (full_name, username, email, password, address, mobile_number, store_name)
+#                 VALUES (?, ?, ?, ?, ?, ?, ?)
+#             '''
+#             cursor.execute(query1, (name, username, email, password, address, mobile, store_name))
+ 
+#         else:
+#             query2 = '''
+#                 INSERT INTO Customer (full_name, username, email, password, address, mobile_number)
+#                 VALUES (?, ?, ?, ?, ?, ?)
+#             '''
+#             cursor.execute(query2, (name, username, email, password, address , mobile))
+ 
+        
+#         conn.commit()
+#         cursor.close()
+#         conn.close()
+ 
+#         flash("Registration successful!", "success")
+#         return redirect(url_for('login'))
+ 
+#     return render_template("register.html", errors={})
+
+@app.route('/retailer/update_order_status', methods=['POST'])
+def update_order_status():
+    # Ensure only a retailer can update order statuses
+    if 'user' not in session or session.get('user_type').lower() != 'retailer':
+        return redirect(url_for('login'))
+    
+    order_id = request.form.get('order_id')
+    new_status = request.form.get('status')
+    
+    # Validate that both values are provided
+    if not order_id or not new_status:
+        flash("Order ID or status missing.", "danger")
+        return redirect(url_for('current_orders'))
+    
+    # Update the order status in the database
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    query = "UPDATE OrderDetails SET status = ? WHERE order_id = ?"
+    try:
+        cursor.execute(query, (new_status, order_id))
+        conn.commit()
+        flash("Order status updated successfully!", "success")
+    except Exception as e:
+        conn.rollback()
+        flash("Error updating order status: " + str(e), "danger")
+    finally:
+        cursor.close()
+        conn.close()
+    
+    return redirect(url_for('current_orders'))
+
+
+def fetch_user_address():
+    if 'user' in session: 
+        conn = get_db_connection()
+        cursor = conn.cursor()
+       
+        query = "SELECT address FROM Customer WHERE username = ?;"  
+        cursor.execute(query, (session.get('user'),))
+       
+        customer_address = cursor.fetchone()  
+       
+        cursor.close()
+        conn.close()
+ 
+        if customer_address:
+            session.get('address') == customer_address[0]  # Store in session
+            print(f"User address fetched: {session.get('address')}")  # Debugging print
+        else:
+            print("No address found for user:", session['user'])  # Debugging print
+    else:
+        print("User not logged in.")
+ 
 
 @app.route('/logout') 
 def logout():
-    se=session.get('user_type').lower()
-    session.pop(se,None) 
-    print(se)
+    session.clear()
     return redirect(url_for('login'))
 
 @app.route('/chome')
@@ -98,6 +278,36 @@ def category():
     if 'user' not in session or session.get('user_type').lower() != 'customer':
         return redirect(url_for('login'))
     return render_template('customer/category.html')
+
+@app.route('/subcategory/<subcategory>')
+def subcategory(subcategory):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+ 
+    query = '''
+        SELECT p.product_name, p.description, p.unit_price, s.subcategory_id, p.image_name, p.product_id
+        FROM Products p
+        JOIN ProductSubcategory s ON p.subcategory_id = s.subcategory_id
+        WHERE s.subcategory_name = ?;
+        '''
+ 
+    cursor.execute(query, (subcategory,))
+    products = [
+        {  
+            'product_name': row[0],
+            'description': row[1],
+            'unit_price': row[2],
+            'subcategory_id': row[3],
+            'image_name': row[4],
+            'product_id': row[5]
+        }
+        for row in cursor.fetchall()
+    ]
+ 
+    cursor.close()
+    conn.close()
+ 
+    return render_template('customer/product.html', subcategory=subcategory, products=products)
 
 # @app.route('/customer/cart')
 # def cart():
@@ -197,11 +407,7 @@ def remove_from_cart(product_id):
     cursor.close()
     conn.close()
     return redirect(url_for('cart'))
-
-@app.route('/customer/home')
-def home():
-    return render_template('customer/home.html')
-    
+  
 @app.route('/customer/order_history')
 def order_history():
     conn = get_db_connection()

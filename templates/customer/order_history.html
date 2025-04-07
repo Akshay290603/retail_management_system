@@ -1,12 +1,13 @@
+{# 
 {% extends "layout.html" %}
 
 {% block title %}
-    SaKsHaM Store        
+SaKsHaM Store        
 {% endblock %}
 
 {% block content %}
 <div class="container">
-    <h2>Order History</h2>
+    <h2>My Orders</h2>
     {% if orders %}
     <ul class="list-group">
         {% for order in orders %}
@@ -21,3 +22,54 @@
     {% endif %}
 </div>
 {% endblock %}
+#}
+{% extends "layout.html" %}
+
+{% block title %}
+    SaKsHaM Store        
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4 text-center fw-bold text-primary">🛒 My Orders</h2>
+
+    {% if orders %}
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        {% for order in orders %}
+        <div class="col">
+            <div class="card shadow-sm border-primary h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-success">
+                        <i class="bi bi-box-seam"></i> {{ order.product_name }}
+                    </h5>
+                    <p class="card-text">
+                        <strong>Total:</strong> ${{ order.total }}<br>
+                        <strong>Status:</strong> 
+                        <span class="badge 
+                            {% if order.status == 'Delivered' %}
+                                bg-success
+                            {% elif order.status == 'Pending' %}
+                                bg-warning text-dark
+                            {% elif order.status == 'Cancelled' %}
+                                bg-danger
+                            {% else %}
+                                bg-secondary
+                            {% endif %}
+                        ">
+                            {{ order.status }}
+                        </span><br>
+                        <small class="text-muted">Ordered on: {{ order.date }}</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center mt-5" role="alert">
+        <i class="bi bi-emoji-frown"></i> No previous orders found.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

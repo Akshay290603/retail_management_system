@@ -1,3 +1,4 @@
+{#
 {% extends "layout.html" %}
 
 {% block title %}
@@ -31,6 +32,67 @@
     </form>
     {% else %}
     <p>Your cart is empty.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+#}
+
+{% extends "layout.html" %}
+
+{% block title %}
+    SaKsHaM Store        
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4 text-primary fw-bold">🛍️ Your Cart</h2>
+
+    {% if error_message %}
+    <div class="alert alert-danger text-center" role="alert">
+        {{ error_message }}
+    </div>
+    {% endif %}
+
+    {% if cart_items %}
+    <div class="card shadow-lg mb-4">
+        <div class="card-body">
+            <ul class="list-group mb-3">
+                {% for item in cart_items %}
+                <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                    <div class="me-3">
+                        <h5 class="mb-1">{{ item.product_name }}</h5>
+                        <small>Quantity: {{ item.quantity }}</small><br>
+                        <small>Price: ₹{{ item.unit_price }} each</small><br>
+                        <strong>Total: ₹{{ item.unit_price * item.quantity }}</strong>
+                    </div>
+                    <form action="/remove_from_cart/{{ item.product_id }}" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-trash"></i> Remove
+                        </button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">🧾 Grand Total:</h5>
+                <h4 class="text-success fw-bold">₹{{ total }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-end">
+        <form action="/checkout" method="POST">
+            <button type="submit" class="btn btn-success btn-lg">
+                <i class="bi bi-bag-check-fill"></i> Proceed to Checkout
+            </button>
+        </form>
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center mt-5" role="alert">
+        🛒 Your cart is empty. Start adding some items!
+    </div>
     {% endif %}
 </div>
 {% endblock %}

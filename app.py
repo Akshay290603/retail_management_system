@@ -321,7 +321,7 @@ def fetch_user_address():
             cursor.execute(query, (session['user'],))
             customer_address = cursor.fetchone()
  
-            session['user_address'] = customer_address[0] if customer_address else "No address found"
+            session['user_address'] = customer_address if customer_address else "No address found"
  
         except Exception as e:
             print("Error fetching user address:", e)
@@ -422,6 +422,50 @@ def cart():
     conn.close()
     return render_template('customer/cart.html', cart_items=cart_items, total=total)
 
+@app.route('/cart/increase/<int:product_id>', methods=['POST'])
+def increase_quantity(product_id):
+    if 'user' not in session or session.get('user_type').lower() != 'customer':
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Update quantity by +1
+    cursor.execute("""
+        UPDATE Cart
+        SET quantity = quantity + 1
+        WHERE product_id = ? AND customer_id = ?
+    """, (product_id, session['user_id']))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return redirect(url_for('cart')) 
+
+@app.route('/cart/decrease/<int:product_id>', methods=['POST'])
+def decrease_quantity(product_id):
+    if 'user' not in session or session.get('user_type').lower() != 'customer':
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Only decrease if current quantity > 1
+    cursor.execute("""
+        UPDATE Cart
+        SET quantity = quantity - 1
+        WHERE product_id = ? AND customer_id = ? AND quantity > 1
+    """, (product_id, session['user_id']))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return redirect(url_for('cart'))
+
+
+
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 def add_to_cart(product_id):
     if 'user' not in session or session.get('user_type').lower() != 'customer':
@@ -450,10 +494,6 @@ def add_to_cart(product_id):
             INSERT INTO Cart (customer_id, product_id, quantity) 
             VALUES ((SELECT customer_id FROM Customer WHERE username = ?), ?, 1)
         ''', (session['user'], product_id))
-    
-    
-
-
     conn.commit()
     cursor.close()
     conn.close()
@@ -475,19 +515,24 @@ def remove_from_cart(product_id):
   
 @app.route('/customer/order_history')
 def order_history():
+    if 'user' not in session or session.get('user_type').lower() != 'customer':
+        return redirect(url_for('login'))
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+    print(session['user'])
     query = '''
         SELECT p.product_name, order_date, status, SUM(o.quantity * o.unit_price) AS total
         FROM OrderDetails as o
         join Products as p 
         on o.product_id=p.product_id
+        join customer c 
+        on o.customer_id=c.customer_id
+        where c.customer_id = ?
         GROUP BY p.product_name, order_date, status
         ORDER BY order_date DESC;
     '''
     
-    cursor.execute(query)
+    cursor.execute(query,session['user_id'])
     orders = [
         {
             'product_name': row[0],
@@ -586,8 +631,7 @@ def checkout():
 
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    # Fetch cart items for the current customer
+    # Fetch cart items for the customer
     customer_id = session.get('user_id')
     customer_id = session.get('user_id')
     cursor.execute('''
@@ -702,22 +746,75 @@ def products_show():
 
 #     return render_template('product.html', products=products, search_query=search_query)
 
-@app.route('/rhome')
+
+def has_inventory(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "SELECT COUNT(*) FROM Inventory WHERE retailer_id = ?"
+    cursor.execute(query, (user_id,))
+    count = cursor.fetchone()[0]
+    cursor.close()
+    conn.close()
+    return count > 0
+
+# @app.route('/rhome')
+# @app.route('/retailer/current_orders')
+# def current_orders():
+#     if 'user' not in session or session.get('user_type').lower() != 'retailer':
+#         return redirect(url_for('login'))
+    
+#     # if not has_inventory(session['user_id']):
+#     #     return redirect(url_for('inventory'))
+
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
+
+#     query = """
+#     select od.order_id, p.product_name, od.quantity, od.unit_price, od.status, od.order_date
+#     from OrderDetails as od
+#     join Products as p on od.product_id = p.product_id
+#     where od.retaier_id = ?
+#     order by od.order_date desc
+#     """
+#     cursor.execute(query)
+#     orders = [
+#         {
+#             'order_id': row[0],
+#             'product_name': row[1],
+#             'quantity': row[2],
+#             'unit_price': row[3],
+#             'status': row[4],
+#             'order_date': row[5]
+#         }
+#         for row in cursor.fetchall()
+#     ]
+
+#     cursor.close()
+#     conn.close()
+#     return render_template('retailer/current_orders.html', orders=orders)
+
 @app.route('/retailer/current_orders')
 def current_orders():
     if 'user' not in session or session.get('user_type').lower() != 'retailer':
         return redirect(url_for('login'))
+    
+    if not has_inventory(session['user_id']):
+        return redirect(url_for('manage_inventory'))  
+
     conn = get_db_connection()
     cursor = conn.cursor()
-
+    
     query = """
-    select od.order_id, p.product_name, od.quantity, od.unit_price, od.status, od.order_date
-    from OrderDetails as od
-    join Products as p on od.product_id = p.product_id
-
-    order by od.order_date desc
+    SELECT od.order_id, p.product_name, od.quantity, od.unit_price, od.status, od.order_date
+    FROM OrderDetails AS od
+    JOIN Products AS p ON od.product_id = p.product_id
+    JOIN Inventory AS i ON i.product_id = od.product_id AND i.retailer_id = od.retailer_id
+    WHERE i.retailer_id = ?
+      AND od.quantity <= i.stock_qty
+    ORDER BY od.order_date DESC
     """
-    cursor.execute(query)
+    
+    cursor.execute(query, (session['user_id'],))
     orders = [
         {
             'order_id': row[0],
@@ -854,9 +951,9 @@ def restock():
         SELECT p.product_id, p.product_name, i.stock_qty
         FROM Inventory AS i
         JOIN Products AS p ON i.product_id = p.product_id
-        WHERE stock_qty < 110;
+        WHERE stock_qty < 110 and i.retailer_id= ?;
     '''
-    cursor.execute(fetch_query)
+    cursor.execute(fetch_query,session['user_id'])
 
     low_stock_products = [
         {

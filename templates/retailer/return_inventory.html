@@ -42,7 +42,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2 class="text-center mb-4">Current Orders</h2>
+    <h2 class="text-center mb-4">Return Inventory</h2>
 
     {% if orders %}
         <div class="table-responsive">
@@ -50,44 +50,27 @@
                 <thead class="table-dark">
                     <tr>
                         <th scope="col">Order ID</th>
-                        <th scope="col">City</th>
                         <th scope="col">Product Name</th>
-                        <th scope="col">Quantity</th>
-                        <th scope="col">Total Order Value</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Order Date</th>
-                        <th scope="col">Update Status</th>
+                        <th scope="col">Request From Customer</th>
+                        <th scope="col">Feedback Description</th>
+                        <th scope="col">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for order in orders %}
                     <tr>
                         <td>{{ order.order_id }}</td>
-                        <td>{{ order.city }}</td>
                         <td>{{ order.product_name }}</td>
-                        <td>{{ order.quantity }}</td>
-                        <td>₹{{ order.total_price }}</td>
+                        <td>{{ order.request }}</td>
+                        <td>{{ order.feedback_description }}</td>
                         <td>
-                            {% if order.status == 'Pending' %}
-                                <span class="badge bg-warning text-dark">Pending</span>
-                            {% elif order.status == 'Completed' %}
-                                <span class="badge bg-success">Completed</span>
-                            {% elif order.status == 'Cancelled' %}
-                                <span class="badge bg-danger">Cancelled</span>
-                            {% else %}
-                                <span class="badge bg-secondary">{{ order.status }}</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ order.order_date }}</td>
-                        <td>
-                          {% if order.status == 'Pending' %}
-                            <form method="POST" action="{{ url_for('update_order_status') }}">
+                          {% if order.status == 'Return' or order.status == 'Replace' %}
+                            <form method="POST" action="{{ url_for('update_return_inventory') }}">
                                 <input type="hidden" name="order_id" value="{{ order.order_id }}">
                                 <select class="form-select mb-2" name="status" required>
-                                    <option value="">Select status</option>
-                                    <!-- <option value="Pending">Pending</option> -->
-                                    <option value="Completed">Completed</option>
-                                    <option value="Cancelled">Cancelled</option>
+                                    <option value="">Select action</option>
+                                    <option value="Accecpted">Accecpted</option>
+                                    <option value="Rejected">Rejected</option>
                                 </select>
                                 <button type="submit" class="btn btn-sm btn-primary">Update</button>
                             </form>
@@ -102,7 +85,7 @@
         </div>
     {% else %}
         <div class="alert alert-info text-center" role="alert">
-            No current orders available.
+            No Current Return Or Replace Orders
         </div>
     {% endif %}
 </div>

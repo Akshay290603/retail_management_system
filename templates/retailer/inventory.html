@@ -27,6 +27,9 @@
           <li class="nav-item">
             <a class="nav-link" href="{{ url_for('dashboard')}}">Dashboard</a>
           </li>
+          <li claskk="nav-item">
+            <a class="nav-link" href="{{ url_for('return_inventory')}}">Return Inventory</a>
+          </li>
           <li class="nav-item">
             <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
           </li>
@@ -62,7 +65,8 @@
         <thead>
             <tr>
                 <th>Product Name</th>
-                <th>Stock Quantity</th>
+                <th>Previous Quantity</th>
+                <th>Current Quantity</th>
                 <!-- <th>Reorder Level</th> -->
             </tr>
         </thead>
@@ -70,6 +74,7 @@
             {% for item in inventory_items %}
             <tr>
                 <td>{{ item.product_name }}</td>
+                <td>{{ item.prev_stock_qty }}</td>
                 <td>{{ item.stock_qty }}</td>
                 <!-- <td>{{ item.reorder_level }}</td> -->
             </tr>

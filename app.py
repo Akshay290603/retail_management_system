@@ -2,6 +2,8 @@
 import re
 from flask import Flask, render_template, request, redirect, url_for, session,flash
 from config import get_db_connection, get_products
+import pandas as pd 
+import plotly.express as px
 # from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -23,7 +25,7 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         user_type = request.form.get('user_type').lower()
-
+ 
         conn = get_db_connection()
         cursor = conn.cursor()
         table = "Retailer" if user_type == "retailer" else "Customer"
@@ -33,20 +35,22 @@ def login():
         user = cursor.fetchone()
         cursor.close()
         conn.close()
-
+ 
         if user and user[4] == password:
             session['user_id']=user[0]
             session['user'] = user[2]
             session['user_type'] = user_type
             session['address']= user[5]
+            session['city']= user[6]
             if user_type == "retailer":
                 session['store_name'] = user[7]
                 return redirect(url_for('current_orders'))
             else:
                 return redirect(url_for('category'))
         else:
-            return "Invalid Credentials"
-    return render_template("login.html")
+            return render_template("login.html", error="Invalid Credentials")
+    else:
+        return render_template("login.html")  
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -59,58 +63,59 @@ def register():
         address = request.form.get('address')
         mobile = request.form.get('mobile')
         user_type = request.form.get('user_type')
+        city = request.form.get('city')
         store_name = request.form.get('store_name') if user_type == "retailer" else None
-
+ 
         # Validate username
         if not username:
             errors['username'] = "Username is required!"
-
+ 
         # Validate password
         if not re.match(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', password):
             errors['password'] = "Password must be at least 8 characters long, with uppercase, lowercase, a number, and a special character."
-
+ 
         # Validate mobile number
         if not re.match(r'^\d{10}$', mobile):
             errors['mobile'] = "Mobile number must be exactly 10 digits."
-
+ 
         conn = get_db_connection()
         cursor = conn.cursor()
-
+ 
         # Check for duplicate username
         cursor.execute('SELECT username FROM Retailer WHERE username = ? UNION SELECT username FROM Customer WHERE username = ?', (username, username))
         if cursor.fetchone():
             errors['username'] = "Username already exists. Please choose a different username."
-
+ 
         # Check for duplicate email
         cursor.execute('SELECT email FROM Retailer WHERE email = ? UNION SELECT email FROM Customer WHERE email = ?', (email, email))
         if cursor.fetchone():
             errors['email'] = "Email already exists. Please use a different email."
-
+ 
         if errors:
             cursor.close()
             conn.close()
             return render_template('register.html', errors=errors)
-
+ 
         if user_type == "retailer":
             query1 = '''
-                INSERT INTO Retailer (full_name, username, email, password, address, mobile_number, store_name)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO Retailer (full_name, username, email, password, address, city, mobile_number, store_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             '''
-            cursor.execute(query1, (name, username, email, password, address, mobile, store_name))
-
+            cursor.execute(query1, (name, username, email, password, address, city, mobile, store_name))
+ 
         else:
             query2 = '''
-                INSERT INTO Customer (full_name, username, email, password, address, mobile_number)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO Customer (full_name, username, email, password, address, city, mobile_number)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             '''
-            cursor.execute(query2, (name, username, email, password, address, mobile))
-
+            cursor.execute(query2, (name, username, email, password, address, city, mobile))
+ 
         conn.commit()
         cursor.close()
         conn.close()
-
+ 
         return redirect(url_for('login'))
-
+ 
     return render_template("register.html", errors=errors)
 
 # @app.route('/register', methods=['GET', 'POST'])
@@ -295,10 +300,31 @@ def update_order_status():
     # Update the order status in the database
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
+    query2='''
+        select quantity 
+        from OrderDetails
+        where order_id = ?
+    '''
+    cursor.execute(query2,(order_id))
+
+    result=cursor.fetchone()
+
+    qunatity=result[0]
+
+    print(qunatity)
     query = "UPDATE OrderDetails SET status = ? WHERE order_id = ?"
     try:
         cursor.execute(query, (new_status, order_id))
+        
+        if new_status == 'Completed':
+            query1= '''
+                update inventory 
+                set stock_qty = stock_qty - ?
+                where retailer_id = ?
+            '''
+            cursor.execute(query1,(qunatity,session['user_id'] ))
+
         conn.commit()
         flash("Order status updated successfully!", "success")
     except Exception as e:
@@ -307,8 +333,63 @@ def update_order_status():
     finally:
         cursor.close()
         conn.close()
+
     
     return redirect(url_for('current_orders'))
+
+
+# @app.route('/retailer/update_order_status', methods=['POST'])
+# def update_order_status():
+#     if 'user' not in session or session.get('user_type').lower() != 'retailer':
+#         return redirect(url_for('login'))
+    
+#     order_id = request.form.get('order_id')
+#     new_status = request.form.get('status')
+    
+#     if not order_id or not new_status:
+#         flash("Order ID or status missing.", "danger")
+#         return redirect(url_for('current_orders'))
+    
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
+    
+#     try:
+#         # Step 1: Get order quantity
+#         order_qty_query = '''
+#             SELECT quantity 
+#             FROM orderdetails
+#             WHERE order_id = ?
+#         '''
+#         cursor.execute(order_qty_query, order_id)
+#         result = cursor.fetchone()
+#         if result is None:
+#             flash("Order not found.", "danger")
+#             return redirect(url_for('current_orders'))
+        
+#         quantity = result[0]
+
+#         # Step 2: Update order status
+#         update_order_query = "UPDATE OrderDetails SET status = ? WHERE order_id = ?"
+#         cursor.execute(update_order_query, (new_status, order_id))
+
+#         # Step 3: Reduce stock in inventory
+#         update_stock_query = '''
+#             UPDATE inventory 
+#             SET stock_qty = stock_qty - ?
+#             WHERE order_id = ?
+#         '''
+#         cursor.execute(update_stock_query, (quantity, order_id))
+
+#         conn.commit()
+#         flash("Order status and inventory updated successfully!", "success")
+#     except Exception as e:
+#         conn.rollback()
+#         flash("Error updating order status: " + str(e), "danger")
+#     finally:
+#         cursor.close()
+#         conn.close()
+    
+#     return redirect(url_for('current_orders'))
 
 
 def fetch_user_address():
@@ -430,7 +511,7 @@ def increase_quantity(product_id):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Update quantity by +1
+   
     cursor.execute("""
         UPDATE Cart
         SET quantity = quantity + 1
@@ -451,7 +532,7 @@ def decrease_quantity(product_id):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Only decrease if current quantity > 1
+ 
     cursor.execute("""
         UPDATE Cart
         SET quantity = quantity - 1
@@ -498,7 +579,7 @@ def add_to_cart(product_id):
     cursor.close()
     conn.close()
     
-    return redirect(url_for('cart'))
+    return redirect(request.referrer)
 
 @app.route('/remove_from_cart/<int:product_id>', methods=['POST'])
 def remove_from_cart(product_id):
@@ -513,39 +594,195 @@ def remove_from_cart(product_id):
     conn.close()
     return redirect(url_for('cart'))
   
+# working order history 
+
+# @app.route('/customer/order_history')
+# def order_history():
+#     if 'user' not in session or session.get('user_type').lower() != 'customer':
+#         return redirect(url_for('login'))
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
+#     print(session['user'])
+#     query = '''
+#         SELECT p.product_name, order_date, status, SUM(o.quantity * o.unit_price) AS total
+#         FROM OrderDetails as o
+#         join Products as p 
+#         on o.product_id=p.product_id
+#         join customer c 
+#         on o.customer_id=c.customer_id
+#         where c.customer_id = ?
+#         GROUP BY p.product_name, order_date, status
+#         ORDER BY order_date DESC;
+#     '''
+    
+#     cursor.execute(query,session['user_id'])
+#     orders = [
+#         {
+#             'product_name': row[0],
+#             'date': row[1],
+#             'status': row[2],
+#             'total': row[3]
+#         }
+#         for row in cursor.fetchall()
+#     ]
+    
+#     cursor.close()
+#     conn.close()
+#     return render_template('customer/order_history.html',orders=orders)
+
+# new order history 
+
+# @app.route('/customer/order_history')
+# def order_history():
+#     if 'user' not in session or session.get('user_type').lower() != 'customer':
+#         return redirect(url_for('login'))
+    
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
+    
+#     query = '''
+#         SELECT o.order_id, p.product_name, o.order_date, o.status,
+#                SUM(o.quantity * o.unit_price) AS total
+#         FROM OrderDetails AS o
+#         JOIN Products AS p ON o.product_id = p.product_id
+#         JOIN Customer AS c ON o.customer_id = c.customer_id
+#         WHERE c.customer_id = ?
+#         GROUP BY o.order_id, p.product_name, o.order_date, o.status
+#         ORDER BY o.order_date DESC;
+#     '''
+    
+#     cursor.execute(query, session['user_id'])
+#     orders = [
+#         {
+#             'order_id': row[0],
+#             'product_name': row[1],
+#             'date': row[2],
+#             'status': row[3],
+#             'total': row[4]
+#         }
+#         for row in cursor.fetchall()
+#     ]
+#     # fetching the status from feedback table
+#     query1='''
+#         SELECT od.order_id, od.order_date, od.status, f.request,SUM(od.quantity * od.unit_price) AS total
+#         FROM OrderDetails AS od
+#         JOIN Feedback as f ON od.order_id = f.order_id
+#         JOIN Customer AS c ON od.customer_id = c.customer_id 
+#         WHERE c.customer_id = ?
+#         GROUP BY od.order_id,od.order_date, od.status, f.request; 
+#     '''
+
+#     cursor.execute(query1,session['user_id'])
+
+#     feedback_status = [
+#         {
+#             'request' : row[0],
+#             'rating' : row[1]
+#         }
+#         for row in cursor.fetchall()
+#     ]
+
+#     cursor.close()
+#     conn.close()
+#     return render_template('customer/order_history.html', orders=orders, feedback_status=feedback_status)
+
 @app.route('/customer/order_history')
 def order_history():
     if 'user' not in session or session.get('user_type').lower() != 'customer':
         return redirect(url_for('login'))
+
     conn = get_db_connection()
     cursor = conn.cursor()
-    print(session['user'])
+
     query = '''
-        SELECT p.product_name, order_date, status, SUM(o.quantity * o.unit_price) AS total
-        FROM OrderDetails as o
-        join Products as p 
-        on o.product_id=p.product_id
-        join customer c 
-        on o.customer_id=c.customer_id
-        where c.customer_id = ?
-        GROUP BY p.product_name, order_date, status
-        ORDER BY order_date DESC;
+        SELECT o.order_id, p.product_name, o.order_date, o.status,
+               SUM(o.quantity * o.unit_price) AS total,
+               f.rating, f.feedback_description, f.request,o.quantity,f.r_quantity
+        FROM OrderDetails AS o
+        JOIN Products AS p ON o.product_id = p.product_id
+        JOIN Customer AS c ON o.customer_id = c.customer_id
+        LEFT JOIN Feedback AS f ON o.order_id = f.order_id
+        WHERE c.customer_id = ?
+        GROUP BY o.order_id, p.product_name, o.order_date, o.status,
+                 f.rating, f.feedback_description, f.request, o.quantity,f.r_quantity
+        ORDER BY o.order_date DESC;
     '''
-    
-    cursor.execute(query,session['user_id'])
-    orders = [
-        {
-            'product_name': row[0],
-            'date': row[1],
-            'status': row[2],
-            'total': row[3]
-        }
-        for row in cursor.fetchall()
-    ]
-    
+
+    cursor.execute(query, session['user_id'])
+
+    orders = []
+    for row in cursor.fetchall():
+        orders.append({
+            'order_id': row[0],
+            'product_name': row[1],
+            'date': row[2],
+            'status': row[3],
+            'total': row[4],
+            'rating': row[5],  
+            'feedback_description': row[6], 
+            'request': row[7],
+            'order_qunatity' : row[8],
+            'return_quantity' : row[9]
+        })
+
     cursor.close()
     conn.close()
-    return render_template('customer/order_history.html',orders=orders)
+
+    return render_template('customer/order_history.html', orders=orders)
+
+
+# feedback functionality
+@app.route('/submit_feedback', methods=['POST'])
+def submit_feedback():
+    if 'user' not in session or session.get('user_type').lower() != 'customer':
+        return redirect(url_for('login'))
+
+    order_id = request.form['order_id']
+    rating = request.form['rating']
+    description = request.form.get('feedback_description', '')
+    request_type = request.form.get('request', '')
+    return_quantity = request.form.get('return_quantity')
+
+    customer_id = session['user_id']
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Get product_id, retailer_id and order quantity
+    cursor.execute('''
+        SELECT product_id, retailer_id, quantity FROM OrderDetails WHERE order_id = ?
+    ''', (order_id,))
+    result = cursor.fetchone()
+
+    if result:
+        product_id, retailer_id, ordered_quantity = result
+
+        # Validate return quantity only if Return or Replace is selected
+        if request_type in ['Return', 'Replace']:
+            try:
+                return_quantity = int(return_quantity or 0)
+                if return_quantity < 1 or return_quantity > ordered_quantity:
+                    flash(f"⚠️ Return quantity must be between 1 and {ordered_quantity}.", 'danger')
+                    return redirect(url_for('order_history'))
+            except ValueError:
+                flash("⚠️ Invalid return quantity entered.", 'danger')
+                return redirect(url_for('order_history'))
+        else:
+            return_quantity = None  # Ignore if no return/replace is selected
+
+        # Insert into Feedback table
+        cursor.execute('''
+            INSERT INTO Feedback (order_id, product_id, retailer_id, customer_id, rating, feedback_description, request, r_quantity)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (order_id, product_id, retailer_id, customer_id, rating, description, request_type, return_quantity))
+
+        conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    flash('✅ Thank you for your feedback!', 'success')
+    return redirect(url_for('order_history'))
+
 
 # @app.route('/checkout', methods=['POST'])
 # def checkout():
@@ -709,6 +946,7 @@ def checkout():
 
     return redirect(url_for('order_history'))
 
+
 @app.route('/customer/product')
 def products_show():
     if 'user' not in session or session.get('user_type').lower() != 'customer':
@@ -717,22 +955,30 @@ def products_show():
     cursor = conn.cursor()
  
     query = """
-        select product_name, description, unit_price, subcategory_id, image_name, product_id
-        from Products
-        where product_name like ? ;
+        select p.product_name, p.description, p.unit_price, p.subcategory_id, p.image_name, p.product_id, i.stock_qty, r.retailer_id, r.store_name
+        from Products as p
+        join Inventory as i on p.product_id = i.product_id
+        join retailer as r on i.retailer_id = r.retailer_id
+        where p.product_name like ? ;
     """
     search_query = request.args.get('query', '')
+    print("Search Query:", search_query)
     cursor.execute(query, ('%' + search_query + '%',))
+    rows = cursor.fetchall()
+   
     products = [
-        {   
+        {  
             'product_name': row[0],
             'description': row[1],
             'unit_price': row[2],
             'subcategory_id': row[3],
             'image_name': row[4],
-            'product_id': row[5]
+            'product_id': row[5],
+            'stock_qty': row[6],
+            'retailer_id': row[7],
+            'store_name': row[8]
         }
-        for row in cursor.fetchall()
+        for row in rows
     ]
  
     cursor.close()
@@ -797,36 +1043,41 @@ def has_inventory(user_id):
 def current_orders():
     if 'user' not in session or session.get('user_type').lower() != 'retailer':
         return redirect(url_for('login'))
-    
+   
     if not has_inventory(session['user_id']):
         return redirect(url_for('manage_inventory'))  
-
+ 
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+   
     query = """
-    SELECT od.order_id, p.product_name, od.quantity, od.unit_price, od.status, od.order_date
+    SELECT od.order_id, p.product_name, od.quantity, (od.unit_price * od.quantity) as total_price , od.status, od.order_date, c.city
     FROM OrderDetails AS od
     JOIN Products AS p ON od.product_id = p.product_id
     JOIN Inventory AS i ON i.product_id = od.product_id AND i.retailer_id = od.retailer_id
+    JOIN Customer AS c ON od.customer_id = c.customer_id
+ 
     WHERE i.retailer_id = ?
-      AND od.quantity <= i.stock_qty
-    ORDER BY od.order_date DESC
+        AND od.quantity <= i.stock_qty
+    ORDER BY
+        CASE WHEN c.city like ? THEN 0 ELSE 1 END,
+        od.order_date DESC;
     """
-    
-    cursor.execute(query, (session['user_id'],))
+   
+    cursor.execute(query, (session['user_id'], session['city']))
     orders = [
         {
             'order_id': row[0],
             'product_name': row[1],
             'quantity': row[2],
-            'unit_price': row[3],
+            'total_price': row[3],
             'status': row[4],
-            'order_date': row[5]
+            'order_date': row[5],
+            'city': row[6]
         }
         for row in cursor.fetchall()
     ]
-
+ 
     cursor.close()
     conn.close()
     return render_template('retailer/current_orders.html', orders=orders)
@@ -835,47 +1086,48 @@ def current_orders():
 def manage_inventory():
     if 'user' not in session or session.get('user_type').lower() != 'retailer':
         return redirect(url_for('login'))
-
+ 
     conn = get_db_connection()
     cursor = conn.cursor()
-
+ 
     if request.method == 'POST':
         product_id = request.form['product_id']
         stock_qty = int(request.form['stock_qty'])
         retailer_id = session.get('user_id')
-
+ 
         # Insert or update the inventory
         cursor.execute('''
             IF EXISTS (SELECT 1 FROM Inventory WHERE product_id = ? AND retailer_id = ?)
             BEGIN
                 UPDATE Inventory
-                SET stock_qty = stock_qty + ?
+                SET prev_stock_qty = stock_qty,
+                       stock_qty = stock_qty + ?
                 WHERE product_id = ? AND retailer_id = ?;
             END
             ELSE
             BEGIN
-                INSERT INTO Inventory (product_id, retailer_id, stock_qty, reorder_level)
-                VALUES (?, ?, ?, 10);
+                INSERT INTO Inventory (product_id, retailer_id, stock_qty, reorder_level, prev_stock_qty)
+                VALUES (?, ?, ?, 10, 0);
             END
         ''', (product_id, retailer_id, stock_qty, product_id, retailer_id, product_id, retailer_id, stock_qty))
         conn.commit()
-
+ 
     # Fetch all products for the dropdown
     cursor.execute('SELECT product_id, product_name FROM Products')
     products = cursor.fetchall()
-
+ 
     # Fetch the retailer's inventory
     cursor.execute('''
-        SELECT p.product_name, i.stock_qty, i.reorder_level
+        SELECT p.product_name, i.stock_qty, i.reorder_level, i.prev_stock_qty
         FROM Inventory AS i
         JOIN Products AS p ON i.product_id = p.product_id
         WHERE i.retailer_id = ?;
     ''', (session.get('user_id'),))
     inventory_items = cursor.fetchall()
-
+ 
     cursor.close()
     conn.close()
-
+ 
     return render_template('retailer/inventory.html', products=products, inventory_items=inventory_items)
 
 @app.route('/retailer/customer_management')
@@ -907,11 +1159,11 @@ def customer_management():
 
     return render_template('retailer/customer_management.html',customers=customers)
 
-@app.route('/retailer/dashboard')
-def dashboard():
-    if 'user' not in session or session.get('user_type').lower() != 'retailer':
-        return redirect(url_for('login'))
-    return render_template('retailer/dashboard.html')
+# @app.route('/retailer/dashboard')
+# def dashboard():
+#     if 'user' not in session or session.get('user_type').lower() != 'retailer':
+#         return redirect(url_for('login'))
+#     return render_template('retailer/dashboard.html')
 
 # @app.route('/retailer/expired_products')
 # def expired_products():
@@ -968,6 +1220,101 @@ def restock():
     conn.close()
 
     return render_template('retailer/restock.html', low_stock_products=low_stock_products)
+
+@app.route('/retailer/return_inventory')
+def return_inventory():
+    if 'user' not in session or session.get('user_type').lower() != 'retailer':
+        return redirect(url_for('login'))
+    
+    conn = get_db_connection()
+
+    cursor = conn.cursor()
+
+    query= '''
+        select 
+    ''' 
+
+    return render_template('/retailer/return_inventory.html')
+
+@app.route('/retailer/dashboard')
+def dashboard():
+    if 'user' not in session or session.get('user_type').lower() != 'retailer':
+        return redirect(url_for('login'))
+   
+    conn=get_db_connection()
+ 
+    query = """
+        SELECT
+            pc.category_name,
+            p.product_name,
+            ps.subcategory_name,
+            SUM(od.quantity) AS total_quantity,
+            SUM(od.quantity * od.unit_price) AS total_sales
+        FROM OrderDetails od
+        JOIN Products p ON od.product_id = p.product_id
+        JOIN ProductCategory pc ON p.category_id = pc.category_id
+        JOIN ProductSubcategory ps ON p.subcategory_id = ps.subcategory_id
+        WHERE retailer_id = ?
+        GROUP BY pc.category_name,p.product_name, ps.subcategory_name
+    """
+ 
+    df = pd.read_sql(query, conn, params=(session['user_id']))
+ 
+    query1=''' SELECT c.city, SUM(od.quantity * od.unit_price) AS total_sales, month(od.order_date) as month
+        FROM OrderDetails od
+        JOIN Customer c ON od.customer_id = c.customer_id
+        WHERE retailer_id = ?
+        GROUP BY c.city, month(od.order_date)'''
+   
+    df1 = pd.read_sql(query1, conn, params=(session['user_id']))
+    # Plot 1: Quantity per category
+    fig1 = px.bar(df, x='category_name', y='total_quantity', title='Total Quantity Sold per Category')
+    fig1.update_layout(xaxis_title='Category', yaxis_title='Quantity')
+    chart1 = fig1.to_html(full_html=False)
+ 
+    # Plot 2: Sales per category
+    fig2 = px.bar(df, x='category_name', y='total_sales', title='Total Sales per Category', color='category_name')
+    fig2.update_layout(xaxis_title='Category', yaxis_title='Sales')
+    chart2 = fig2.to_html(full_html=False)
+ 
+    # Plot 3 : pie chart sales by product
+ 
+    fig3 = px.pie(df,values='total_quantity',names='product_name',title='Total Quantity Ordered by Product Name', hover_data=['total_sales'],labels={'total_sales': 'Total Sales '})
+    fig3.update_traces(textposition='inside',textinfo='percent+label')
+    chart3=fig3.to_html(full_html=False)
+ 
+    # Plot 4: Quantity per subcategory
+    fig4 = px.pie(df,values='total_quantity',names='subcategory_name',title='Total Quantity by Product subcategory', hover_data=['total_sales'],labels={'total_sales': 'Total Sales '})
+    fig4.update_traces(textposition='inside',textinfo='percent+label')
+    chart4=fig4.to_html(full_html=False)
+ 
+     # Plot 4: amount per subcategory
+    fig5 = px.bar(df, x='subcategory_name', y='total_sales', title='Total Sales per SubCategory', color='subcategory_name')
+    fig5.update_layout(xaxis_title='SubCategory', yaxis_title='Sales')
+    chart5 = fig5.to_html(full_html=False)
+ 
+    # Plot 6: amount per region
+    fig6 = px.bar(df1, x="total_sales", y="city", color='city', orientation='h',
+             # hover_data=["tip", "size"],
+             height=400,
+             title='Regional Sales Distribution')
+    fig6.update_layout(xaxis_title='Sales', yaxis_title='City')
+    chart6 = fig6.to_html(full_html=False)
+ 
+    # Plot 6: amount per month
+    fig7 = px.line(df1, x='city', y='total_sales', title='Sales per City')
+    fig7.update_layout(xaxis_title='City', yaxis_title='Sales')
+    chart7 = fig7.to_html(full_html=False)
+ 
+    return render_template('/retailer/dashboard.html', chart1=chart1, chart2=chart2, chart3=chart3, chart4=chart4, chart5=chart5, chart6=chart6, chart7=chart7)
+
+@app.route('/retailer/return_inventory')
+def return_inventory():
+    if 'user' not in session or session.get('user_type').lower() != 'retailer':
+        return redirect(url_for('login'))
+    
+    
+
 
 if __name__ == "__main__":
     app.run(debug=True)

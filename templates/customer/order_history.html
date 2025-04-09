@@ -1,37 +1,20 @@
-{# 
 {% extends "layout.html" %}
 
-{% block title %}
-SaKsHaM Store        
-{% endblock %}
-
-{% block content %}
-<div class="container">
-    <h2>My Orders</h2>
-    {% if orders %}
-    <ul class="list-group">
-        {% for order in orders %}
-        <li class="list-group-item">
-            Product Name : {{ order.product_name }} - Total: ${{ order.total }} - Status: {{ order.status }}
-            <br>Ordered on: {{ order.date }}
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p>No previous orders found.</p>
-    {% endif %}
-</div>
-{% endblock %}
-#}
-{% extends "layout.html" %}
-
-{% block title %}
-    SaKsHaM Store        
-{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
     <h2 class="mb-4 text-center fw-bold text-primary">🛒 My Orders</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 
     {% if orders %}
     <div class="row row-cols-1 row-cols-md-2 g-4">
@@ -46,7 +29,7 @@ SaKsHaM Store
                         <strong>Total:</strong> ${{ order.total }}<br>
                         <strong>Status:</strong> 
                         <span class="badge 
-                            {% if order.status == 'Delivered' %}
+                            {% if order.status == 'Completed' %}
                                 bg-success
                             {% elif order.status == 'Pending' %}
                                 bg-warning text-dark
@@ -58,8 +41,60 @@ SaKsHaM Store
                         ">
                             {{ order.status }}
                         </span><br>
+                        <strong>Quantity: {{ order.order_qunatity}} </strong> <br>
                         <small class="text-muted">Ordered on: {{ order.date }}</small>
                     </p>
+
+                    {% if order.status == 'Completed' %}
+                        {% if order.rating %}
+                            <div class="mt-3 p-3 border rounded bg-light">
+                                <strong>Your Feedback:</strong><br>
+                                <strong>Rating:</strong> {{ order.rating }} ⭐<br>
+                                <strong>Description:</strong> {{ order.feedback_description or 'N/A' }}<br>
+                                <strong>Request:</strong> {{ order.request or 'None' }} <br>
+                                {% if order.request in ['Return', 'Replace'] and order.return_quantity %}
+                                    <strong>{{ order.request }} Quantity:</strong> {{ order.return_quantity }}
+                                {% endif %}
+                            </div>
+                        {% else %}
+                        <form action="{{ url_for('submit_feedback') }}" method="POST" class="mt-3">
+                            <input type="hidden" name="order_id" value="{{ order.order_id }}">
+                        
+                            <div class="mb-2">
+                                <label for="rating" class="form-label fw-semibold">Rate the product:</label>
+                                <select name="rating" class="form-select" required>
+                                    <option value="" disabled selected>Select Rating</option>
+                                    {% for i in range(1, 6) %}
+                                        <option value="{{ i }}">{{ i }} Star{{ 's' if i > 1 }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        
+                            <div class="mb-2">
+                                <label for="feedback_description" class="form-label fw-semibold">Feedback (optional):</label>
+                                <textarea name="feedback_description" class="form-control" rows="2"></textarea>
+                            </div>
+                        
+                            <div class="mb-2">
+                                <label class="form-label fw-semibold">Request:</label>
+                                <select name="request" class="form-select request-select" data-order="{{ order.order_id }}">
+                                    <option value="" selected>None</option>
+                                    <option value="Return">Return</option>
+                                    <option value="Replace">Replace</option>
+                                </select>
+                            </div>
+                        
+                            <!-- Return Quantity Field (Hidden by default) -->
+                            <div class="mb-2 return-quantity-box" id="return-box-{{ order.order_id }}" style="display: none;">
+                                <label class="form-label fw-semibold">Return Quantity (if applicable):</label>
+                                <input type="number" name="return_quantity" class="form-control" min="1" max="{{ order.quantity }}" placeholder="Enter quantity to return">
+                                <small class="text-muted">You ordered: {{ order.quantity }}</small>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm">Submit Feedback</button>
+                        </form>
+                        
+                        {% endif %}
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -71,5 +106,39 @@ SaKsHaM Store
     </div>
     {% endif %}
 </div>
-{% endblock %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const requestSelects = document.querySelectorAll(".request-select");
 
+        requestSelects.forEach(select => {
+            select.addEventListener("change", function () {
+                const orderId = this.getAttribute("data-order");
+                const box = document.getElementById("return-box-" + orderId);
+                
+                if (this.value === "Return" || this.value === "Replace") {
+                    box.style.display = "block";
+                } else {
+                    box.style.display = "none";
+                }
+            });
+        });
+
+        const forms = document.querySelectorAll("form");
+        forms.forEach(form => {
+            form.addEventListener("submit", function (e) {
+                const request = form.querySelector("select[name='request']");
+                const quantityField = form.querySelector("input[name='return_quantity']");
+                const max = parseInt(quantityField?.getAttribute("max"));
+                const value = parseInt(quantityField?.value);
+
+                if ((request.value === "Return" || request.value === "Replace") && (value > max)) {
+                    e.preventDefault();
+                    alert("Return quantity cannot be more than what you ordered!");
+                }
+            });
+        });
+    });
+</script>
+
+
+{% endblock %}

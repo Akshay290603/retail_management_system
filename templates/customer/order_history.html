@@ -55,6 +55,7 @@
                                 {% if order.request in ['Return', 'Replace'] and order.return_quantity %}
                                     <strong>{{ order.request }} Quantity:</strong> {{ order.return_quantity }}
                                 {% endif %}
+                                <!-- <strong>Return/Replace status: {{order.request}}</strong> -->
                             </div>
                         {% else %}
                         <form action="{{ url_for('submit_feedback') }}" method="POST" class="mt-3">

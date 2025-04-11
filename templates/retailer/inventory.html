@@ -1,85 +1,137 @@
 {% extends "layout.html" %}
 
 {% block navbar %}
+<!-- Add Bootstrap Icons CDN in your base template -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
 <header>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm py-3">
     <div class="container-fluid">
-      <a class="navbar-brand" href="{{ url_for('index') }}">RMS</a>
+      <a class="navbar-brand fw-bold text-info fs-4" href="{{ url_for('index') }}">
+        <i class="bi bi-shop me-2"></i>RMS
+      </a>
+
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
         aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
-     
-      <div class="collapse navbar-collapse flex-grow-0" id="navbarNav">
-        <ul class="navbar-nav ms-auto">
-          <!-- <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('customer_management')}}">Customer Management</a>
-            </li>         -->
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('current_orders')}}">Home</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('manage_inventory')}}">Inventory</a>
-            </li>   
+
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <ul class="navbar-nav gap-2">
           <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('restock')}}">Restock</a>
-          </li>          
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('dashboard')}}">Dashboard</a>
-          </li>
-          <li claskk="nav-item">
-            <a class="nav-link" href="{{ url_for('return_inventory')}}">Return Inventory</a>
+            <a class="nav-link text-light" href="{{ url_for('current_orders') }}">
+              <i class="bi bi-house-door me-1"></i>Home
+            </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+            <a class="nav-link text-light" href="{{ url_for('manage_inventory') }}">
+              <i class="bi bi-box-seam me-1"></i>Inventory
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-light" href="{{ url_for('restock') }}">
+              <i class="bi bi-arrow-repeat me-1"></i>Restock
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-light" href="{{ url_for('customer_management') }}">
+              <i class="bi bi-arrow-repeat me-1"></i>Customer Management
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-light" href="{{ url_for('dashboard') }}">
+              <i class="bi bi-graph-up-arrow me-1"></i>Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-light" href="{{ url_for('retailer_return_inventory') }}">
+              <i class="bi bi-box-arrow-in-left me-1"></i>Returns
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-danger" href="{{ url_for('logout') }}">
+              <i class="bi bi-box-arrow-right me-1"></i>Logout
+            </a>
           </li>
         </ul>
-       
       </div>
     </div>
   </nav>
 </header>
+
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <h2>Manage Inventory</h2>
-    <form method="POST" action="/retailer/inventory">
-        <div class="form-group">
-            <label for="product_id">Product</label>
-            <select class="form-control" id="product_id" name="product_id" required>
-                {% for product in products %}
-                <option value="{{ product.product_id }}">{{ product.product_name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="stock_qty">Stock Quantity</label>
-            <input type="number" class="form-control" id="stock_qty" name="stock_qty" min="1" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Add</button>
-    </form>
-    <hr>
-    <h3>Current Inventory</h3>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Product Name</th>
-                <th>Previous Quantity</th>
-                <th>Current Quantity</th>
-                <!-- <th>Reorder Level</th> -->
-            </tr>
-        </thead>
-        <tbody>
+<div class="container my-4">
+  <div class="bg-white p-4 shadow rounded">
+      <h2 class="text-primary mb-4">
+          <i class="bi bi-clipboard-data me-2"></i>Manage Inventory
+      </h2>
+
+      <form method="POST" action="/retailer/inventory">
+          <div class="mb-3">
+              <label for="product_id" class="form-label fw-semibold">Select Product</label>
+              <select class="form-select" id="product_id" name="product_id" required>
+                  {% for product in products %}
+                  <option value="{{ product.product_id }}">{{ product.product_name }} - {{ product.unit_price }}</option>
+                  {% endfor %}
+              </select>
+          </div>
+
+          <div class="mb-3">
+              <label for="stock_qty" class="form-label fw-semibold">Stock Quantity</label>
+              <input type="number" class="form-control" id="stock_qty" name="stock_qty" min="1" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="MRP" class="form-label fw-semibold">MRP</label>
+            <input type="number" class="form-control" id="MRP" name="MRP" step="0.01" min="1" required>
+          </div>
+          {% if added_total %}
+          <div class="alert alert-info mt-3">
+            You need to pay ₹{{ "%.2f"|format(added_total) }} for adding {{ added_quantity }} units of {{ added_product_name }}.
+          </div>
+          {% endif %}
+          <button type="submit" class="btn btn-success">
+              <i class="bi bi-plus-circle me-1"></i>Add to Inventory
+          </button>
+      </form>
+  </div>
+
+  <hr class="my-5">
+
+  <div class="bg-light p-4 shadow rounded">
+      <h3 class="text-dark mb-3">
+          <i class="bi bi-box-seam me-2"></i>Current Inventory
+      </h3>
+
+      <table class="table table-hover table-bordered align-middle text-center">
+          <thead class="table-dark">
+              <tr>
+                  <th>Product Name</th>
+                  <th>Previous Quantity</th>
+                  <th>Current Quantity</th>
+                  <th>MRP</th>
+              </tr>
+          </thead>
+          <tbody>
             {% for item in inventory_items %}
+            {% set current = item.stock_qty or 0 %}
+            {% set previous = item.prev_stock_qty or 0 %}
+            {% set qty_class = 'text-success' if current > previous 
+                      else 'text-danger' if current < previous 
+                      else '' %}
             <tr>
-                <td>{{ item.product_name }}</td>
-                <td>{{ item.prev_stock_qty }}</td>
-                <td>{{ item.stock_qty }}</td>
-                <!-- <td>{{ item.reorder_level }}</td> -->
+              <td>{{ item.product_name }}</td>
+              <td>{{ previous }}</td>
+              <td class="{{ qty_class }}">{{ current }}</td>
+              <td>{{ item.MRP }}</td>
             </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+          {% endfor %}
+        
+          </tbody>
+      </table>
+  </div>
 </div>
+
 {% endblock %}

@@ -20,6 +20,9 @@
                 7: 'food/snacks',
                 8: 'food/grocery'
             } %}
+ 
+            
+ 
            
             <div class="col">
                 <div class="card h-100 shadow-sm d-flex flex-column">
@@ -31,12 +34,16 @@
                     <!-- Card Body -->
                     <div class="card-body d-flex flex-column">
                         <h5 class="card-title">{{ product.product_name }}</h5>
-                        <p class="mb-1"><strong>Price:</strong> ₹{{ product.unit_price }}</p>
+                        <p class="mb-1"><strong>Price:</strong> ₹{{ product.MRP }}</p>
                         <p class="mb-1"><strong>Sold by:</strong> {{ product.store_name }}</p>
+                        {% if product.discount > 0 %}
+                            <p class="mb-1 text-success"><strong>Discount:</strong> {{ product.discount }}%</p>
+                            <p class="mb-1 text-primary"><strong>Discounted Price:</strong> ₹{{ product.final_price }}</p>
+                        {% endif %}
                         <p class="card-text small text-muted mb-3">{{ product.description }}</p>
                        
                         <!-- Add to Cart Button -->
-                        <form action="{{ url_for('add_to_cart', product_id=product.product_id) }}" method="POST" class="mt-auto">
+                        <form action="{{ url_for('add_to_cart',product_id=product.product_id, retailer_id=product.retailer_id) }}" method="POST" class="mt-auto">
                             <button type="submit" class="btn btn-success w-100">Add to Cart</button>
                         </form>
                     </div>

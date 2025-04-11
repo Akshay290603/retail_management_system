@@ -1,9 +1,9 @@
 {% extends "layout.html" %}
 {% block title %}Register - Retail Management System{% endblock %}
-
+ 
 {% block navbar %}
-{% endblock navbar%}
-
+{% endblock navbar %}
+ 
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-6">
@@ -13,53 +13,73 @@
         <div class="mb-3">
           <label for="user_type" class="form-label">Register as:</label>
           <select class="form-select" name="user_type" id="user_type" onchange="toggleStoreName()" required>
-            <option value="customer">Customer</option>
-            <option value="retailer">Retailer</option>
+            <option value="customer" {% if form_data.get('user_type') == 'customer' %}selected{% endif %}>Customer</option>
+            <option value="retailer" {% if form_data.get('user_type') == 'retailer' %}selected{% endif %}>Retailer</option>
           </select>
         </div>
+ 
         <div class="mb-3">
           <label for="full_name" class="form-label">Full Name</label>
-          <input type="text" class="form-control" name="full_name" id="full_name" placeholder="Enter your full name" required>
+          <input type="text" class="form-control" name="full_name" id="full_name"
+                 value="{{ form_data.get('full_name', '') }}" placeholder="Enter your full name" required>
         </div>
+ 
         <div class="mb-3">
           <label for="username" class="form-label">Username</label>
-          <input type="text" class="form-control" name="username" id="username" placeholder="Choose a username" required>
+          <input type="text" class="form-control" name="username" id="username"
+                 value="{{ form_data.get('username', '') }}" placeholder="Choose a username" required>
           {% if errors and 'username' in errors %}
           <small class="error text-danger">{{ errors['username'] }}</small>
           {% endif %}
         </div>
+ 
         <div class="mb-3">
           <label for="email" class="form-label">Email</label>
-          <input type="email" class="form-control" name="email" id="email" placeholder="Enter your email" required>
+          <input type="email" class="form-control" name="email" id="email"
+                 value="{{ form_data.get('email', '') }}" placeholder="Enter your email" required>
           {% if errors and 'email' in errors %}
           <small class="error text-danger">{{ errors['email'] }}</small>
           {% endif %}
         </div>
+ 
         <div class="mb-3">
           <label for="password" class="form-label">Password</label>
-          <input type="password" class="form-control" name="password" id="password" placeholder="Enter your password" required>
+          <input type="password" class="form-control" name="password" id="password"
+                 placeholder="Enter your password" required>
           {% if errors and 'password' in errors %}
           <small class="error text-danger">{{ errors['password'] }}</small>
           {% endif %}
         </div>
+ 
         <div class="mb-3">
           <label for="address" class="form-label">Address</label>
-          <textarea class="form-control" name="address" id="address" rows="3" placeholder="Enter your address" required></textarea>
+          <textarea class="form-control" name="address" id="address" rows="3" placeholder="Enter your address" required>{{ form_data.get('address', '') }}</textarea>
         </div>
+ 
+        <div class="mb-3">
+          <label for="city" class="form-label">City</label>
+          <textarea class="form-control" name="city" id="city" rows="2" placeholder="Enter your city" required>{{ form_data.get('city', '') }}</textarea>
+        </div>
+ 
         <div class="mb-3">
           <label for="mobile" class="form-label">Mobile Number</label>
-          <input type="text" class="form-control" name="mobile" id="mobile" placeholder="Enter your mobile number" required>
+          <input type="text" class="form-control" name="mobile" id="mobile"
+                 value="{{ form_data.get('mobile', '') }}" placeholder="Enter your mobile number" required>
           {% if errors and 'mobile' in errors %}
           <small class="error text-danger">{{ errors['mobile'] }}</small>
           {% endif %}
         </div>
+ 
         <div class="mb-3" id="store_name_field" style="display: none;">
           <label for="store_name" class="form-label">Store Name:</label>
-          <input class="form-control" type="text" name="store_name" id="store_name">
+          <input class="form-control" type="text" name="store_name" id="store_name"
+                 value="{{ form_data.get('store_name', '') }}">
         </div>
+ 
         <button type="submit" class="btn btn-primary w-100">Register</button>
       </form>
     </div>
+ 
     <div class="border-top pt-3 text-center">
       <small class="text-muted">
         Already Have An Account? <a class="ml-2" href="{{ url_for('login') }}">Sign In</a>
@@ -67,16 +87,16 @@
     </div>
   </div>
 </div>
+ 
 <script>
   function toggleStoreName() {
-      var userType = document.getElementById("user_type").value;
-      var storeNameField = document.getElementById("store_name_field");
-
-      if (userType === "retailer") {
-          storeNameField.style.display = "block";
-      } else {
-          storeNameField.style.display = "none";
-      }
+    const userType = document.getElementById("user_type").value;
+    const storeField = document.getElementById("store_name_field");
+    storeField.style.display = userType === "retailer" ? "block" : "none";
   }
+ 
+  // Ensure store name field displays correctly on load
+  window.onload = toggleStoreName;
 </script>
 {% endblock %}
+ 

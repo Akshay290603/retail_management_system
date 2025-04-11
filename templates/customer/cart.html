@@ -61,7 +61,7 @@
                 {% for item in cart_items %}
                 <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
                     <div class="me-3">
-                        <h5 class="mb-1">{{ item.product_name }}</h5>
+                        <h5 class="mb-1">{{ item.product_name }} <small class="text-muted">({{ item.retailer_name }})</small></h5>
                         <small>Quantity: {{ item.quantity }}</small><br>
                         <small>Price: ₹{{ item.unit_price }} each</small><br>
                         <strong>Total: ₹{{ item.unit_price * item.quantity }}</strong>
@@ -69,12 +69,12 @@
                     <!-- Button stack -->
                     <div class="d-flex flex-column align-items-end gap-1">
                         <div class="d-flex">
-                            <form action="/cart/increase/{{ item.product_id}}" method="POST" class="me-1">
+                            <form action="/cart/increase/{{ item.product_id }}/{{ item.retailer_id }}" method="POST" class="me-1">
                                 <button type="submit" class="btn btn-outline-success btn-sm">
                                     <i class="bi"> + </i>
                                 </button>
                             </form>
-                            <form action="/cart/decrease/{{ item.product_id}}" method="POST" >
+                            <form action="/cart/decrease/{{ item.product_id}}/{{ item.retailer_id }}" method="POST" >
                                 <button type="submit" class="btn btn-outline-success btn-sm">
                                     <i class="bi"> - </i>
                                 </button>

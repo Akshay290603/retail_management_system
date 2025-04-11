@@ -51,7 +51,6 @@ def login():
             return render_template("login.html", error="Invalid Credentials")
     else:
         return render_template("login.html")  
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     errors = {}
@@ -94,7 +93,7 @@ def register():
         if errors:
             cursor.close()
             conn.close()
-            return render_template('register.html', errors=errors)
+            return render_template('register.html', errors=errors, form_data=request.form)
  
         if user_type == "retailer":
             query1 = '''
@@ -116,7 +115,7 @@ def register():
  
         return redirect(url_for('login'))
  
-    return render_template("register.html", errors=errors)
+    return render_template("register.html", errors=errors, form_data={})
 
 # @app.route('/register', methods=['GET', 'POST'])
 # def register():
@@ -427,34 +426,69 @@ def category():
 
 @app.route('/subcategory/<subcategory>')
 def subcategory(subcategory):
+    if 'user' not in session or session.get('user_type').lower() != 'customer':
+        return redirect(url_for('login'))
+ 
     conn = get_db_connection()
     cursor = conn.cursor()
  
+    customer_id = session.get('user_id')
+ 
+    # Fetch all products in the specified subcategory with inventory and retailer details
     query = '''
-        SELECT p.product_name, p.description, p.unit_price, s.subcategory_id, p.image_name, p.product_id
+        SELECT p.product_name, p.description, i.MRP, s.subcategory_id, p.image_name, p.product_id, r.store_name, r.retailer_id
         FROM Products p
         JOIN ProductSubcategory s ON p.subcategory_id = s.subcategory_id
+        JOIN Inventory i on p.product_id = i.product_id
+        JOIN Retailer r on i.retailer_id = r.retailer_id
         WHERE s.subcategory_name = ?;
-        '''
- 
+    '''
     cursor.execute(query, (subcategory,))
-    products = [
-        {  
-            'product_name': row[0],
-            'description': row[1],
-            'unit_price': row[2],
-            'subcategory_id': row[3],
-            'image_name': row[4],
-            'product_id': row[5]
-        }
-        for row in cursor.fetchall()
-    ]
+    product_rows = cursor.fetchall()
+ 
+    # Fetch discounts for this customer from each retailer
+    cursor.execute("""
+        SELECT d.retailer_id, d.discount
+        FROM Discounts as d
+        WHERE customer_id = ?
+    """, (customer_id,))
+    discount_dict = {row[0]: row[1] for row in cursor.fetchall()}
+ 
+    products = []
+    for row in product_rows:
+        product_name = row[0]
+        description = row[1]
+        mrp = row[2]
+        subcategory_id = row[3]
+        image_name = row[4]
+        product_id = row[5]
+        store_name = row[6]
+        retailer_id = row[7]
+ 
+        # Ensure MRP is not None
+        if mrp is None:
+            mrp = 0.0
+ 
+        discount_value = discount_dict.get(retailer_id, 0)
+        final_price = round(mrp * (1 - discount_value / 100), 2) if discount_value > 0 else mrp
+ 
+        products.append({
+            'product_name': product_name,
+            'description': description,
+            'MRP': mrp,
+            'subcategory_id': subcategory_id,
+            'image_name': image_name,
+            'product_id': product_id,
+            'store_name': store_name,
+            'retailer_id': retailer_id,
+            'discount': discount_value,
+            'final_price': final_price
+        })
  
     cursor.close()
     conn.close()
  
     return render_template('customer/product.html', subcategory=subcategory, products=products)
-
 # @app.route('/customer/cart')
 # def cart():
 #     # if 'user' not in session or session.get('user_type') != 'Customer':
@@ -478,45 +512,69 @@ def subcategory(subcategory):
 #     cursor.close()
 #     conn.close()
 #     return render_template('customer/cart.html', cart_items=cart_items, total=total)
-
 @app.route('/customer/cart')
 def cart():
     if 'user' not in session or session.get('user_type').lower() != 'customer':
         return redirect(url_for('login'))
+ 
     conn = get_db_connection()
     cursor = conn.cursor()
+    
     query = '''
-        SELECT p.product_name, c.quantity, p.unit_price, p.product_id 
-        FROM cart as c
-        JOIN Products as p ON c.product_id = p.product_id
-        WHERE c.customer_id = (SELECT customer_id FROM Customer WHERE username = ?)
+    SELECT 
+    p.product_name, c.quantity, 
+    CASE 
+        WHEN d.discount > 0 THEN i.MRP * (1 - d.discount / 100)
+        ELSE i.MRP
+    END AS discounted_price, p.product_id, r.retailer_id, r.store_name
+    FROM cart AS c JOIN 
+    products AS p ON c.product_id = p.product_id
+    JOIN 
+    discounts AS d ON d.customer_id = c.customer_id 
+    JOIN 
+    inventory AS i ON p.product_id = i.product_id AND c.retailer_id = i.retailer_id
+    JOIN 
+    retailer AS r ON c.retailer_id = r.retailer_id
+    WHERE 
+    c.customer_id = ?
+
     '''
-    cursor.execute(query, (session['user'],))
-    print(session['user'])
-    print(query)
+    cursor.execute(query, (session['user_id'],))
     cart_items = [
-        {'product_name': row[0], 'quantity': row[1], 'unit_price': row[2], 'product_id': row[3]}
+        {
+            'product_name': row[0],
+            'quantity': row[1],
+            'unit_price': row[2],
+            'product_id': row[3],
+            'retailer_id': row[4],
+            'retailer_name': row[5]
+        }
         for row in cursor.fetchall()
     ]
+ 
     total = sum(item['unit_price'] * item['quantity'] for item in cart_items)
     cursor.close()
     conn.close()
     return render_template('customer/cart.html', cart_items=cart_items, total=total)
 
-@app.route('/cart/increase/<int:product_id>', methods=['POST'])
-def increase_quantity(product_id):
+@app.route('/customer/payment_success')
+def payment_success():
+    # Handle post-payment logic here: order DB updates, email, etc.
+    return render_template('customer/payment_success.html')
+
+
+@app.route('/cart/increase/<int:product_id>/<int:retailer_id>', methods=['POST'])
+def increase_quantity(product_id, retailer_id):
     if 'user' not in session or session.get('user_type').lower() != 'customer':
         return redirect(url_for('login'))
-
     conn = get_db_connection()
     cursor = conn.cursor()
-
-   
     cursor.execute("""
         UPDATE Cart
         SET quantity = quantity + 1
-        WHERE product_id = ? AND customer_id = ?
-    """, (product_id, session['user_id']))
+        WHERE product_id = ? AND customer_id = ? AND retailer_id = ?
+                   """, (product_id, session['user_id'], retailer_id))
+
     
     conn.commit()
     cursor.close()
@@ -524,8 +582,8 @@ def increase_quantity(product_id):
     
     return redirect(url_for('cart')) 
 
-@app.route('/cart/decrease/<int:product_id>', methods=['POST'])
-def decrease_quantity(product_id):
+@app.route('/cart/decrease/<int:product_id>/<int:retailer_id>', methods=['POST'])
+def decrease_quantity(product_id, retailer_id):
     if 'user' not in session or session.get('user_type').lower() != 'customer':
         return redirect(url_for('login'))
 
@@ -536,8 +594,8 @@ def decrease_quantity(product_id):
     cursor.execute("""
         UPDATE Cart
         SET quantity = quantity - 1
-        WHERE product_id = ? AND customer_id = ? AND quantity > 1
-    """, (product_id, session['user_id']))
+        WHERE product_id = ? AND customer_id = ? AND quantity > 1 AND retailer_id = ?
+    """, (product_id, session['user_id'], retailer_id))
     
     conn.commit()
     cursor.close()
@@ -545,41 +603,45 @@ def decrease_quantity(product_id):
     
     return redirect(url_for('cart'))
 
-
-
-@app.route('/add_to_cart/<int:product_id>', methods=['POST'])
-def add_to_cart(product_id):
+@app.route('/add_to_cart/<int:product_id>/<int:retailer_id>', methods=['POST'])
+def add_to_cart(product_id, retailer_id):
     if 'user' not in session or session.get('user_type').lower() != 'customer':
         return redirect(url_for('login'))
-    
+ 
     conn = get_db_connection()
     cursor = conn.cursor()
-    
-    # Check if product already in cart
+ 
+    # Get customer_id using session username
+    cursor.execute("SELECT customer_id FROM Customer WHERE username = ?", (session['user'],))
+    customer_id = cursor.fetchone()[0]
+ 
+    # Check if product from this retailer is already in cart
     cursor.execute('''
         SELECT quantity FROM Cart 
-        WHERE product_id = ? AND customer_id = (SELECT customer_id FROM Customer WHERE username = ?)
-    ''', (product_id, session['user']))
+        WHERE product_id = ? AND retailer_id = ? AND customer_id = ?
+    ''', (product_id, retailer_id, customer_id))
     result = cursor.fetchone()
-    
+ 
     if result:
         # Update quantity
         cursor.execute('''
             UPDATE Cart 
             SET quantity = quantity + 1 
-            WHERE product_id = ? AND customer_id = (SELECT customer_id FROM Customer WHERE username = ?)
-        ''', (product_id, session['user']))
+            WHERE product_id = ? AND retailer_id = ? AND customer_id = ?
+        ''', (product_id, retailer_id, customer_id))
     else:
         # Add new product to cart
         cursor.execute('''
-            INSERT INTO Cart (customer_id, product_id, quantity) 
-            VALUES ((SELECT customer_id FROM Customer WHERE username = ?), ?, 1)
-        ''', (session['user'], product_id))
+            INSERT INTO Cart (customer_id, product_id, retailer_id, quantity) 
+            VALUES (?, ?, ?, 1)
+        ''', (customer_id, product_id, retailer_id))
+ 
     conn.commit()
     cursor.close()
     conn.close()
-    
+ 
     return redirect(request.referrer)
+
 
 @app.route('/remove_from_cart/<int:product_id>', methods=['POST'])
 def remove_from_cart(product_id):
@@ -860,7 +922,6 @@ def submit_feedback():
 
 #     return redirect(url_for('order_history'))
 
-
 @app.route('/checkout', methods=['POST'])
 def checkout():
     if 'user' not in session or session.get('user_type').lower() != 'customer':
@@ -868,77 +929,85 @@ def checkout():
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    # Fetch cart items for the customer
     customer_id = session.get('user_id')
-    customer_id = session.get('user_id')
+
+    # Fetch cart items with retailer info (including store name)
     cursor.execute('''
-        SELECT c.cart_id, c.product_id, c.quantity, p.product_name, p.unit_price
+        SELECT c.cart_id, c.product_id, c.quantity, p.product_name, i.mrp, c.retailer_id, r.store_name
         FROM Cart AS c
         JOIN Products AS p ON c.product_id = p.product_id
+        JOIN Inventory AS i ON i.product_id = c.product_id AND i.retailer_id = c.retailer_id
+        JOIN Retailer AS r ON c.retailer_id = r.retailer_id
         WHERE c.customer_id = ?;
     ''', (customer_id,))
     cart_items = cursor.fetchall()
 
-    # Generate a new order ID
-    cursor.execute('''
-        INSERT INTO Orders (customer_id, order_date, status)
-        VALUES (?, CURRENT_TIMESTAMP, 'Pending');
-    ''', (customer_id,))
-    conn.commit()
-
-    # Get the generated order_id
-    cursor.execute('SELECT SCOPE_IDENTITY();')
-    order_id = cursor.fetchone()[0]
-
-    print(f"Customer ID: {customer_id}")
-    print(f"Order ID: {order_id}")
-    for item in cart_items:
-        print(f"Product ID: {item[1]}, Quantity: {item[2]}")
-
     out_of_stock_products = []
+    order_ids = {}  # Mapping of retailer_id to order_id
 
-    # Insert cart items into OrderDetails and update Inventory
     for item in cart_items:
-        # Fetch retailer_id and unit_price for each product from Inventory
+        cart_id = item.cart_id
+        product_id = item.product_id
+        quantity = item.quantity
+        product_name = item.product_name
+        mrp = item.mrp
+        retailer_id = item.retailer_id
+
+        # Create order per retailer
+        if retailer_id not in order_ids:
+            cursor.execute('''
+                INSERT INTO Orders (customer_id, retailer_id, order_date, status)
+                VALUES (?, ?, CURRENT_TIMESTAMP, 'Pending');
+            ''', (customer_id, retailer_id))
+            conn.commit()
+
+            cursor.execute('SELECT SCOPE_IDENTITY();')
+            order_ids[retailer_id] = cursor.fetchone()[0]
+
+        order_id = order_ids[retailer_id]
+
+        # Check stock
         cursor.execute('''
-            SELECT retailer_id, unit_price
-            FROM Inventory
-            JOIN Products ON Inventory.product_id = Products.product_id
-            WHERE Inventory.product_id = ?;
-        ''', (item[1],))  # Access the product_id correctly
-        inventory_item = cursor.fetchone()
+            SELECT stock_qty FROM Inventory
+            WHERE product_id = ? AND retailer_id = ?;
+        ''', (product_id, retailer_id))
+        stock_result = cursor.fetchone()
 
-        if inventory_item:
-            retailer_id = inventory_item[0]
-            unit_price = inventory_item[1]
-
-            # Insert into OrderDetails without specifying the identity column
+        if stock_result and stock_result[0] >= quantity:
+            # Insert into OrderDetails
             cursor.execute('''
                 INSERT INTO OrderDetails (retailer_id, customer_id, order_date, status, product_id, quantity, unit_price)
-                 VALUES (?, ?, CURRENT_TIMESTAMP, 'Pending', ?, ?, ?);
-             ''', (retailer_id, customer_id, item[1], item[2], unit_price))
+                VALUES (?, ?, CURRENT_TIMESTAMP, 'Pending', ?, ?, ?);
+            ''', (retailer_id, customer_id, product_id, quantity, mrp))
 
-            # Update Inventory
+            # Update inventory
             cursor.execute('''
                 UPDATE Inventory
                 SET stock_qty = stock_qty - ?
                 WHERE product_id = ? AND retailer_id = ?;
-            ''', (item[2], item[1], retailer_id))
+            ''', (quantity, product_id, retailer_id))
         else:
-            # Add the product to the out_of_stock_products list
-            out_of_stock_products.append(item[1])
-            print(f"No retailer found for product_id: {item[1]}")
+            out_of_stock_products.append(product_name)
 
     if out_of_stock_products:
-        # Handle the case where some products are out of stock
-        out_of_stock_message = "The following products are out of stock: " 
-        return render_template('customer/cart.html', error_message=out_of_stock_message, cart_items=cart_items)
+        # Convert pyodbc.Row objects to dicts for Jinja2
+        cart_items_dicts = [
+            {
+                'product_name': item.product_name,
+                'quantity': item.quantity,
+                'unit_price': item.mrp,
+                'product_id': item.product_id,
+                'retailer_id': item.retailer_id,
+                'retailer_name': item.store_name
+            }
+            for item in cart_items
+        ]
 
-    # Delete cart items after successful checkout
-    cursor.execute('''
-        DELETE FROM Cart
-        WHERE customer_id = ?;
-    ''', (customer_id,))
+        error_message = "The following products are out of stock: " + ", ".join(out_of_stock_products)
+        return render_template('customer/cart.html', error_message=error_message, cart_items=cart_items_dicts)
+
+    # Clear cart after checkout
+    cursor.execute('DELETE FROM Cart WHERE customer_id = ?;', (customer_id,))
     conn.commit()
 
     cursor.close()
@@ -947,39 +1016,194 @@ def checkout():
     return redirect(url_for('order_history'))
 
 
+# @app.route('/checkout', methods=['POST'])
+# def checkout():
+#     if 'user' not in session or session.get('user_type').lower() != 'customer':
+#         return redirect(url_for('login'))
+ 
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
+#     customer_id = session.get('user_id')
+ 
+#     # Fetch cart items with retailer-specific info
+#     cursor.execute('''
+#         SELECT c.cart_id, c.product_id, c.quantity, p.product_name, i.mrp, c.retailer_id
+#         FROM Cart AS c
+#         JOIN Products AS p ON c.product_id = p.product_id
+#         JOIN Inventory AS i ON i.product_id = c.product_id AND i.retailer_id = c.retailer_id
+#         WHERE c.customer_id = ?;
+#     ''', (customer_id,))
+#     cart_items = cursor.fetchall()
+ 
+#     out_of_stock_products = []
+#     order_ids = {}  # Mapping of retailer_id to order_id
+ 
+#     # Create a separate order for each retailer
+#     for item in cart_items:
+#         cart_id, product_id, quantity, product_name, mrp, retailer_id = item
+ 
+#         # Create order only if it doesn't already exist for this retailer
+#         if retailer_id not in order_ids:
+#             cursor.execute('''
+#                 INSERT INTO Orders (customer_id, retailer_id, order_date, status)
+#                 VALUES (?, ?, CURRENT_TIMESTAMP, 'Pending');
+#             ''', (customer_id, retailer_id))
+#             conn.commit()
+ 
+#             cursor.execute('SELECT SCOPE_IDENTITY();')
+#             order_ids[retailer_id] = cursor.fetchone()[0]
+ 
+#         order_id = order_ids[retailer_id]
+ 
+#         # Check stock
+#         cursor.execute('''
+#             SELECT stock_qty FROM Inventory
+#             WHERE product_id = ? AND retailer_id = ?;
+#         ''', (product_id, retailer_id))
+#         stock_result = cursor.fetchone()
+ 
+#         if stock_result and stock_result[0] >= quantity:
+#             # Insert into OrderDetails
+#             cursor.execute('''
+#                 INSERT INTO OrderDetails (retailer_id, customer_id, order_date, status, product_id, quantity, unit_price)
+#                 VALUES (?, ?, CURRENT_TIMESTAMP, 'Pending', ?, ?, ?);
+#             ''', (retailer_id, customer_id, product_id, quantity, mrp))
+
+
+ 
+#             # Update inventory
+#             cursor.execute('''
+#                 UPDATE Inventory
+#                 SET stock_qty = stock_qty - ?
+#                 WHERE product_id = ? AND retailer_id = ?;
+#             ''', (quantity, product_id, retailer_id))
+#         else:
+#             out_of_stock_products.append(product_name)
+ 
+#     if out_of_stock_products:
+#         error_message = "The following products are out of stock: " + ", ".join(out_of_stock_products)
+#         return render_template('customer/cart.html', error_message=error_message, cart_items=cart_items)
+ 
+#     # Clear cart after checkout
+#     cursor.execute('DELETE FROM Cart WHERE customer_id = ?;', (customer_id,))
+#     conn.commit()
+ 
+#     cursor.close()
+#     conn.close()
+ 
+#     return redirect(url_for('order_history'))
+
+
+# @app.route('/customer/product')
+# def products_show():
+#     if 'user' not in session or session.get('user_type').lower() != 'customer':
+#         return redirect(url_for('login'))
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
+ 
+#     query = """
+#         select p.product_name, p.description, p.unit_price, p.subcategory_id, p.image_name, p.product_id, i.stock_qty, r.retailer_id, r.store_name
+#         from Products as p
+#         join Inventory as i on p.product_id = i.product_id
+#         join retailer as r on i.retailer_id = r.retailer_id
+#         where p.product_name like ? ;
+#     """
+#     search_query = request.args.get('query', '')
+#     print("Search Query:", search_query)
+#     cursor.execute(query, ('%' + search_query + '%',))
+#     rows = cursor.fetchall()
+   
+#     products = [
+#         {  
+#             'product_name': row[0],
+#             'description': row[1],
+#             'unit_price': row[2],
+#             'subcategory_id': row[3],
+#             'image_name': row[4],
+#             'product_id': row[5],
+#             'stock_qty': row[6],
+#             'retailer_id': row[7],
+#             'store_name': row[8]
+#         }
+#         for row in rows
+#     ]
+ 
+#     cursor.close()
+#     conn.close()
+#     return render_template('customer/product.html', products=products)
+
 @app.route('/customer/product')
 def products_show():
     if 'user' not in session or session.get('user_type').lower() != 'customer':
         return redirect(url_for('login'))
+ 
     conn = get_db_connection()
     cursor = conn.cursor()
  
-    query = """
-        select p.product_name, p.description, p.unit_price, p.subcategory_id, p.image_name, p.product_id, i.stock_qty, r.retailer_id, r.store_name
-        from Products as p
-        join Inventory as i on p.product_id = i.product_id
-        join retailer as r on i.retailer_id = r.retailer_id
-        where p.product_name like ? ;
-    """
+    customer_id = session.get('user_id')
     search_query = request.args.get('query', '')
-    print("Search Query:", search_query)
+ 
+    # Fetch all products with inventory and retailer details
+    query = """
+        SELECT
+            p.product_name, p.description, i.MRP, p.subcategory_id,
+            p.image_name, p.product_id, i.stock_qty,
+            r.retailer_id, r.store_name, i.MRP, i.inventory_id
+        FROM Products AS p
+        JOIN Inventory AS i ON p.product_id = i.product_id
+        JOIN Retailer AS r ON i.retailer_id = r.retailer_id
+        WHERE p.product_name LIKE ?;
+    """
     cursor.execute(query, ('%' + search_query + '%',))
-    rows = cursor.fetchall()
-   
-    products = [
-        {  
-            'product_name': row[0],
-            'description': row[1],
-            'unit_price': row[2],
-            'subcategory_id': row[3],
-            'image_name': row[4],
-            'product_id': row[5],
-            'stock_qty': row[6],
-            'retailer_id': row[7],
-            'store_name': row[8]
-        }
-        for row in rows
-    ]
+    product_rows = cursor.fetchall()
+ 
+    # Fetch discounts for this customer from each retailer
+    cursor.execute("""
+        SELECT d.retailer_id, d.discount, i.MRP
+        FROM Discounts as d
+        JOIN Inventory as i ON d.retailer_id = i.retailer_id
+        WHERE customer_id = ?
+    """, (customer_id,))
+    discount_dict = {
+    row[0]: {
+        'discount': row[1],
+        'MRP': row[2]
+    }
+    for row in cursor.fetchall()
+    }
+ 
+    products = []
+    for row in product_rows:
+        product_name = row[0]
+        description = row[1]
+        mrp = row[2]
+        subcategory_id = row[3]
+        image_name = row[4]
+        product_id = row[5]
+        stock_qty = row[6]
+        retailer_id = row[7]
+        store_name = row[8]
+        inventory_id = row[9]
+ 
+        
+        discount_value = discount_dict.get(retailer_id, {'discount': 0}).get('discount', 0)
+        final_price = round(mrp * (1 - discount_value / 100), 2) if discount_value > 0 else mrp
+
+ 
+        products.append({
+            'product_name': product_name,
+            'description': description,
+            'MRP': mrp,
+            'subcategory_id': subcategory_id,
+            'image_name': image_name,
+            'product_id': product_id,
+            'stock_qty': stock_qty,
+            'retailer_id': retailer_id,
+            'store_name': store_name,
+            'discount': discount_value,
+            'final_price': final_price,
+            'inventory_id': inventory_id
+        })
  
     cursor.close()
     conn.close()
@@ -1051,7 +1275,7 @@ def current_orders():
     cursor = conn.cursor()
    
     query = """
-    SELECT od.order_id, p.product_name, od.quantity, (od.unit_price * od.quantity) as total_price , od.status, od.order_date, c.city
+    SELECT od.order_id, p.product_name, od.quantity, (i.mrp * od.quantity) as total_price , od.status, od.order_date, c.city
     FROM OrderDetails AS od
     JOIN Products AS p ON od.product_id = p.product_id
     JOIN Inventory AS i ON i.product_id = od.product_id AND i.retailer_id = od.retailer_id
@@ -1060,7 +1284,7 @@ def current_orders():
     WHERE i.retailer_id = ?
         AND od.quantity <= i.stock_qty
     ORDER BY
-        CASE WHEN c.city like ? THEN 0 ELSE 1 END,
+        CASE WHEN LOWER(c.city) = LOWER(?) THEN 0 ELSE 1 END,
         od.order_date DESC;
     """
    
@@ -1090,35 +1314,60 @@ def manage_inventory():
     conn = get_db_connection()
     cursor = conn.cursor()
  
+    # Initialize for GET requests
+    added_total = None
+    added_product_name = None
+    added_quantity = None
+ 
     if request.method == 'POST':
         product_id = request.form['product_id']
         stock_qty = int(request.form['stock_qty'])
         retailer_id = session.get('user_id')
+        MRP = float(request.form['MRP'])
  
-        # Insert or update the inventory
+        # Fetch the unit price before updating the inventory
+        cursor.execute('SELECT product_name, unit_price FROM Products WHERE product_id = ?', (product_id,))
+        product_data = cursor.fetchone()
+ 
+        if product_data:
+            added_product_name = product_data.product_name
+            unit_price = product_data.unit_price
+            added_total = stock_qty * unit_price
+            added_quantity = stock_qty
+ 
+        # Insert or update inventory
         cursor.execute('''
-            IF EXISTS (SELECT 1 FROM Inventory WHERE product_id = ? AND retailer_id = ?)
+            IF EXISTS (
+                SELECT 1 FROM Inventory WHERE product_id = ? AND retailer_id = ?
+            )
             BEGIN
                 UPDATE Inventory
                 SET prev_stock_qty = stock_qty,
-                       stock_qty = stock_qty + ?
+                    stock_qty = stock_qty + ?,
+                    MRP = ?
                 WHERE product_id = ? AND retailer_id = ?;
             END
             ELSE
             BEGIN
-                INSERT INTO Inventory (product_id, retailer_id, stock_qty, reorder_level, prev_stock_qty)
-                VALUES (?, ?, ?, 10, 0);
+                INSERT INTO Inventory (product_id, retailer_id, stock_qty, reorder_level, prev_stock_qty, MRP)
+                VALUES (?, ?, ?, 10, 0, ?);
             END
-        ''', (product_id, retailer_id, stock_qty, product_id, retailer_id, product_id, retailer_id, stock_qty))
+        ''', (
+            product_id, retailer_id,
+            stock_qty, MRP,
+            product_id, retailer_id,
+            product_id, retailer_id, stock_qty, MRP
+        ))
+ 
         conn.commit()
  
-    # Fetch all products for the dropdown
-    cursor.execute('SELECT product_id, product_name FROM Products')
+    # Fetch all products for dropdown
+    cursor.execute('SELECT product_id, product_name, unit_price FROM Products')
     products = cursor.fetchall()
  
-    # Fetch the retailer's inventory
+    # Fetch inventory
     cursor.execute('''
-        SELECT p.product_name, i.stock_qty, i.reorder_level, i.prev_stock_qty
+        SELECT p.product_name, i.stock_qty, i.reorder_level, i.prev_stock_qty, i.MRP
         FROM Inventory AS i
         JOIN Products AS p ON i.product_id = p.product_id
         WHERE i.retailer_id = ?;
@@ -1128,36 +1377,96 @@ def manage_inventory():
     cursor.close()
     conn.close()
  
-    return render_template('retailer/inventory.html', products=products, inventory_items=inventory_items)
+    return render_template(
+        'retailer/inventory.html',
+        products=products,
+        inventory_items=inventory_items,
+        added_total=added_total,
+        added_product_name=added_product_name,
+        added_quantity=added_quantity
+    )
 
-@app.route('/retailer/customer_management')
+@app.route('/retailer/customer_management', methods=['GET', 'POST'])
 def customer_management():
     if 'user' not in session or session.get('user_type').lower() != 'retailer':
         return redirect(url_for('login'))
-    conn=get_db_connection()
-    cursor=conn.cursor()
+ 
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    retailer_id = session.get('user_id')
+ 
+    # Handle form submission for setting discounts
+    if request.method == 'POST':
+        customer_id = request.form.get('customer_id')
+        discount = float(request.form.get('discount'))
+ 
+        # Check if discount already exists for this customer and retailer
+        cursor.execute('''
+            SELECT 1 FROM Discounts WHERE retailer_id = ? AND customer_id = ?
+        ''', (retailer_id, customer_id))
+ 
+        if cursor.fetchone():
+            # Update existing discount
+            cursor.execute('''
+                UPDATE Discounts SET discount = ?
+                WHERE retailer_id = ? AND customer_id = ?
+            ''', (discount, retailer_id, customer_id))
+        else:
+            # Insert new discount
+            cursor.execute('''
+                INSERT INTO Discounts (retailer_id, customer_id, discount)
+                VALUES (?, ?, ?)
+            ''', (retailer_id, customer_id, discount))
+ 
+        conn.commit()
+ 
+    # Fetch average total sales across customers
+    cursor.execute('''
+        SELECT AVG(total) FROM (
+            SELECT SUM(od.quantity * i.MRP) AS total
+            FROM OrderDetails od
+            JOIN Inventory i ON od.product_id = i.product_id
+            WHERE i.retailer_id = ?
+            GROUP BY od.customer_id
+        ) AS subquery
+    ''', (retailer_id,))
+    average_sales = cursor.fetchone()[0] or 0
 
-    query= '''
-        select customer_id, full_name, email, mobile_number 
-        from customer;
-    '''
+    print(average_sales)
+ 
+    # Get loyal customers with their total sales
+    cursor.execute('''
+        SELECT od.customer_id, c.full_name, c.email, c.mobile_number, SUM(od.quantity * i.MRP) AS total_sales
+        FROM OrderDetails od
+        JOIN Inventory i ON od.product_id = i.product_id
+        JOIN Customer c ON od.customer_id = c.customer_id
+        WHERE i.retailer_id = ?
+        GROUP BY od.customer_id, c.full_name, c.email, c.mobile_number
+        HAVING SUM(od.quantity * i.MRP) > (SELECT AVG(total) FROM (
+            SELECT SUM(od.quantity * i.MRP) AS total
+            FROM OrderDetails od
+            JOIN Inventory i ON od.product_id = i.product_id
+            WHERE i.retailer_id = ?
+            GROUP BY od.customer_id
+        ) AS subquery)
+    ''', (retailer_id, retailer_id))
 
-    cursor.execute(query)
+    loyal_customers = cursor.fetchall()
 
-    customers=[
-        {
-            'customer_id':row[0],
-            'full_name':row[1],
-            'email':row[2],
-            'mobile_number':row[3]
-        }
-        for row in cursor.fetchall()
-    ]
-
+    # Get current discounts
+    cursor.execute('''
+        SELECT customer_id, discount FROM Discounts WHERE retailer_id = ?
+    ''', (retailer_id,))
+    discounts_dict = {row.customer_id: row.discount for row in cursor.fetchall()}
+ 
     cursor.close()
     conn.close()
-
-    return render_template('retailer/customer_management.html',customers=customers)
+ 
+    return render_template(
+        'retailer/customer_management.html',
+        loyal_customers=loyal_customers,
+        discounts=discounts_dict
+    )
 
 # @app.route('/retailer/dashboard')
 # def dashboard():
@@ -1221,20 +1530,6 @@ def restock():
 
     return render_template('retailer/restock.html', low_stock_products=low_stock_products)
 
-@app.route('/retailer/return_inventory')
-def return_inventory():
-    if 'user' not in session or session.get('user_type').lower() != 'retailer':
-        return redirect(url_for('login'))
-    
-    conn = get_db_connection()
-
-    cursor = conn.cursor()
-
-    query= '''
-        select 
-    ''' 
-
-    return render_template('/retailer/return_inventory.html')
 
 @app.route('/retailer/dashboard')
 def dashboard():
@@ -1309,11 +1604,81 @@ def dashboard():
     return render_template('/retailer/dashboard.html', chart1=chart1, chart2=chart2, chart3=chart3, chart4=chart4, chart5=chart5, chart6=chart6, chart7=chart7)
 
 @app.route('/retailer/return_inventory')
-def return_inventory():
+def retailer_return_inventory():
     if 'user' not in session or session.get('user_type').lower() != 'retailer':
         return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query='''
+        SELECT o.order_id, p.product_name, c.full_name, 
+               f.request, f.feedback_description,f.r_quantity
+        FROM OrderDetails o
+        JOIN Customer c ON o.customer_id = c.customer_id
+        JOIN Feedback f ON o.order_id = f.order_id
+        join products p on o.product_id= p.product_id
+        WHERE f.request IN ('Return', 'Replace') and f.retailer_id= ?
+    '''
     
-    
+    cursor.execute(query,session['user_id'])
+
+    orders = [
+        {
+            'order_id': row[0],
+            'product_name' : row[1],
+            'full_name' :row[2],
+            'request': row[3],
+            'feedback_description' :row[4],
+            'r_quantity' :  row[5]
+        }
+        for row in cursor.fetchall()
+    ]
+    cursor.close()
+    conn.close()
+
+    return render_template('/retailer/return_inventory.html', orders=orders)
+
+@app.route('/update_return_inventory', methods=['POST'])
+def update_return_inventory():
+    order_id = request.form['order_id']
+    status = request.form['status']
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # ✅ Get feedback row instead of order
+    cur.execute("SELECT * FROM Feedback WHERE order_id = ?", (order_id,))
+    row = cur.fetchone()
+
+    if row:
+        # Convert to dictionary if needed
+        columns = [col[0] for col in cur.description]
+        feedback = dict(zip(columns, row))
+
+        product_id = feedback['product_id']
+        retailer_id = feedback['retailer_id']
+        request_type = feedback['request']
+
+        # ✅ Update the feedback request
+        cur.execute("UPDATE Feedback SET request = ? WHERE order_id = ?", (status, order_id))
+
+        # ✅ If accepted and it's a return, update inventory
+        if status == 'Accepted' and request_type == 'Return':
+            cur.execute("SELECT r_quantity FROM feedback WHERE product_id = ? AND retailer_id = ?", (product_id, retailer_id))
+            product_row = cur.fetchone()
+
+            if product_row:
+                new_quantity = product_row[0] + 1
+                cur.execute("UPDATE Inventory SET stock_qty = stock_qty + ?  WHERE product_id = ? AND retailer_id = ?", (new_quantity, product_id, retailer_id))
+
+        conn.commit()
+        flash("Order status updated successfully.", "success")
+    else:
+        flash("Feedback not found for this order.", "danger")
+
+    conn.close()
+    return redirect(url_for('retailer_return_inventory'))
 
 
 if __name__ == "__main__":

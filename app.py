@@ -1,5 +1,6 @@
 # import pyodbc
 import re
+import calendar
 from flask import Flask, render_template, request, redirect, url_for, session,flash
 from config import get_db_connection, get_products
 import pandas as pd 
@@ -41,8 +42,9 @@ def login():
             session['user'] = user[2]
             session['user_type'] = user_type
             session['address']= user[5]
-            session['city']= user[6]
+            session['city']= user[7]
             if user_type == "retailer":
+                session['city']= user[8]
                 session['store_name'] = user[7]
                 return redirect(url_for('current_orders'))
             else:
@@ -512,50 +514,51 @@ def subcategory(subcategory):
 #     cursor.close()
 #     conn.close()
 #     return render_template('customer/cart.html', cart_items=cart_items, total=total)
+
 @app.route('/customer/cart')
 def cart():
     if 'user' not in session or session.get('user_type').lower() != 'customer':
         return redirect(url_for('login'))
- 
+
     conn = get_db_connection()
     cursor = conn.cursor()
-    
-    query = '''
-    SELECT 
-    p.product_name, c.quantity, 
-    CASE 
-        WHEN d.discount > 0 THEN i.MRP * (1 - d.discount / 100)
-        ELSE i.MRP
-    END AS discounted_price, p.product_id, r.retailer_id, r.store_name
-    FROM cart AS c JOIN 
-    products AS p ON c.product_id = p.product_id
-    JOIN 
-    discounts AS d ON d.customer_id = c.customer_id 
-    JOIN 
-    inventory AS i ON p.product_id = i.product_id AND c.retailer_id = i.retailer_id
-    JOIN 
-    retailer AS r ON c.retailer_id = r.retailer_id
-    WHERE 
-    c.customer_id = ?
 
+    query = '''
+    SELECT
+    p.product_name, c.quantity,
+    CASE
+        WHEN d.discount IS NOT NULL AND d.discount > 0 THEN ROUND(i.MRP * (1 - d.discount / 100.0), 2)
+        ELSE ROUND(i.MRP, 2)
+    END AS discounted_price,
+    p.product_id, r.retailer_id, r.store_name
+    FROM cart AS c
+    JOIN products AS p ON c.product_id = p.product_id
+    JOIN inventory AS i ON p.product_id = i.product_id AND c.retailer_id = i.retailer_id
+    JOIN retailer AS r ON c.retailer_id = r.retailer_id
+    LEFT JOIN discounts AS d
+    ON d.customer_id = c.customer_id AND d.retailer_id = c.retailer_id
+    WHERE c.customer_id = ?
     '''
     cursor.execute(query, (session['user_id'],))
     cart_items = [
         {
             'product_name': row[0],
             'quantity': row[1],
-            'unit_price': row[2],
+            'unit_price': format(row[2], '.2f'),
             'product_id': row[3],
             'retailer_id': row[4],
             'retailer_name': row[5]
         }
         for row in cursor.fetchall()
     ]
- 
-    total = sum(item['unit_price'] * item['quantity'] for item in cart_items)
+
+    total = sum(float(item['unit_price']) * item['quantity'] for item in cart_items)
+    total_formatted = format(total, '.2f')
     cursor.close()
     conn.close()
-    return render_template('customer/cart.html', cart_items=cart_items, total=total)
+    return render_template('customer/cart.html', cart_items=cart_items, total=total_formatted)
+
+
 
 @app.route('/customer/payment_success')
 def payment_success():
@@ -933,12 +936,21 @@ def checkout():
 
     # Fetch cart items with retailer info (including store name)
     cursor.execute('''
-        SELECT c.cart_id, c.product_id, c.quantity, p.product_name, i.mrp, c.retailer_id, r.store_name
-        FROM Cart AS c
-        JOIN Products AS p ON c.product_id = p.product_id
-        JOIN Inventory AS i ON i.product_id = c.product_id AND i.retailer_id = c.retailer_id
-        JOIN Retailer AS r ON c.retailer_id = r.retailer_id
-        WHERE c.customer_id = ?;
+        SELECT
+        c.cart_id, c.product_id, c.quantity, p.product_name,
+        CASE    
+            WHEN d.discount IS NOT NULL AND d.discount > 0 THEN ROUND(i.MRP * (1 - d.discount / 100.0), 2) 
+            ELSE ROUND(i.MRP, 2)
+        END AS mrp,
+        c.retailer_id, r.store_name
+    FROM Cart AS c
+    JOIN Products AS p ON c.product_id = p.product_id
+    JOIN Inventory AS i ON i.product_id = c.product_id AND i.retailer_id = c.retailer_id
+    JOIN Retailer AS r ON c.retailer_id = r.retailer_id
+    LEFT JOIN Discounts AS d
+    ON d.customer_id = c.customer_id AND d.retailer_id = c.retailer_id
+    WHERE c.customer_id = ?;
+
     ''', (customer_id,))
     cart_items = cursor.fetchall()
 
@@ -980,12 +992,12 @@ def checkout():
                 VALUES (?, ?, CURRENT_TIMESTAMP, 'Pending', ?, ?, ?);
             ''', (retailer_id, customer_id, product_id, quantity, mrp))
 
-            # Update inventory
-            cursor.execute('''
-                UPDATE Inventory
-                SET stock_qty = stock_qty - ?
-                WHERE product_id = ? AND retailer_id = ?;
-            ''', (quantity, product_id, retailer_id))
+            # # Update inventory
+            # cursor.execute('''
+            #     UPDATE Inventory
+            #     SET stock_qty = stock_qty - ?
+            #     WHERE product_id = ? AND retailer_id = ?;
+            # ''', (quantity, product_id, retailer_id))
         else:
             out_of_stock_products.append(product_name)
 
@@ -1275,7 +1287,7 @@ def current_orders():
     cursor = conn.cursor()
    
     query = """
-    SELECT od.order_id, p.product_name, od.quantity, (i.mrp * od.quantity) as total_price , od.status, od.order_date, c.city
+    SELECT od.order_id, p.product_name, od.quantity, (od.unit_price * od.quantity) as total_price , od.status, od.order_date, c.city
     FROM OrderDetails AS od
     JOIN Products AS p ON od.product_id = p.product_id
     JOIN Inventory AS i ON i.product_id = od.product_id AND i.retailer_id = od.retailer_id
@@ -1597,8 +1609,10 @@ def dashboard():
     chart6 = fig6.to_html(full_html=False)
  
     # Plot 6: amount per month
-    fig7 = px.line(df1, x='city', y='total_sales', title='Sales per City')
-    fig7.update_layout(xaxis_title='City', yaxis_title='Sales')
+    df1['month_name'] = df1['month'].apply(lambda x: calendar.month_name[x])  # Add this line
+ 
+    fig7 = px.line(df1, x='month_name', y='total_sales', title='Sales per Month')
+    fig7.update_layout(xaxis_title='Month', yaxis_title='Sales')
     chart7 = fig7.to_html(full_html=False)
  
     return render_template('/retailer/dashboard.html', chart1=chart1, chart2=chart2, chart3=chart3, chart4=chart4, chart5=chart5, chart6=chart6, chart7=chart7)
@@ -1669,7 +1683,7 @@ def update_return_inventory():
             product_row = cur.fetchone()
 
             if product_row:
-                new_quantity = product_row[0] + 1
+                new_quantity = product_row[0]
                 cur.execute("UPDATE Inventory SET stock_qty = stock_qty + ?  WHERE product_id = ? AND retailer_id = ?", (new_quantity, product_id, retailer_id))
 
         conn.commit()

@@ -43,7 +43,6 @@
 {% block title %}
     SaKsHaM Store        
 {% endblock %}
-
 {% block content %}
 <div class="container mt-5">
     <h2 class="text-center mb-4 text-primary fw-bold">🛍️ Your Cart</h2>
@@ -64,7 +63,7 @@
                         <h5 class="mb-1">{{ item.product_name }} <small class="text-muted">({{ item.retailer_name }})</small></h5>
                         <small>Quantity: {{ item.quantity }}</small><br>
                         <small>Price: ₹{{ item.unit_price }} each</small><br>
-                        <strong>Total: ₹{{ item.unit_price * item.quantity }}</strong>
+                        <strong>Total: ₹{{ item.unit_price | float * item.quantity | round(2) }}</strong>
                     </div>
                     <!-- Button stack -->
                     <div class="d-flex flex-column align-items-end gap-1">
